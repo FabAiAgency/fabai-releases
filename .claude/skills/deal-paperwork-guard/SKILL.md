@@ -76,22 +76,71 @@ Read the matching reference for the clauses that specifically matter:
 - `references/client-and-event.md` — bookings, events, Glow Booth/HALO gigs, art show vendors and sponsors: deposits, cancellation, usage rights, insurance.
 - `references/red-flags.md` — the specific patterns that preceded HESS and the art show. Check any partnership deal against this.
 
-## Templates
+## The paperwork that already exists — check here FIRST
 
-`assets/` holds starting drafts to fill in and send, so "get it in writing" takes 20 minutes instead of becoming a someday task:
+**Do not draft from scratch, and do not use the templates in `assets/` for Fab Ai work.**
+Seven branded, bracket-fielded drafts were built 2026-08-14 and live in the `fabai-templates`
+repo under `legal/` (docx + pdf, regenerate with `cd _source/legal && node build-<name>.js`):
 
-- `assets/term-sheet-template.md` — a plain-English one-pager covering the five questions. Best first move for a new partnership: cheap, fast, and it surfaces disagreement *before* the lawyer bill.
-- `assets/scope-of-work-template.md` — for contractor/vendor/client work.
-- `assets/credit-and-attribution-clause.md` — drop-in language for the clause that failed him twice.
+| Document | Covers |
+|---|---|
+| `Fab-Ai-Company-Agreement-DRAFT` | Malik/Andrew founders, 50/50, shotgun deadlock, unanimous-consent list, optional vesting |
+| `Fab-Ai-CTO-Contractor-Agreement-DRAFT` | Eman — comp/rev-share in brackets, Schedule 1 stays confidential and off shared storage |
+| `Fab-Ai-IP-Assignment-DRAFT` | Confirmatory — mops up work already built. The past is not covered by the other drafts |
+| `Fab-Ai-Master-Services-Agreement-DRAFT` | Client stack, per-SOW IP model choice, AI clauses |
+| `Fab-Ai-Statement-of-Work-TEMPLATE` | Per-engagement scope |
+| `Fab-Ai-Software-License-SaaS-Terms-DRAFT` | When the deal is software |
+| `Fab-Ai-Data-Processing-Addendum-DRAFT` | When it touches customer data |
+| `Fab-Ai-Mission-Achieve-Program-Partnership-DRAFT` | Program partnership |
+
+`legal/OPEN-DECISIONS.md` is the live gate — it names every decision that must be made before
+any of these can be signed, and the signing order (Company Agreement → Eman's pair → client
+stack). **Read it before saying anything about Fab Ai paperwork.** The drafts are not the
+blocker; the decisions are.
+
+The `assets/` templates in this skill are the fallback for deals the pack does not cover —
+JCM/Glow Booth bookings, the art show, a fast one-page term sheet for something new like Blue
+Tile where no entity has even been chosen yet.
+
+## Standing state as of 2026-09-02 — this is what "everything is trust" means
+
+Malik confirmed nothing is signed. The concrete exposure:
+
+- **Andrew Mendez** is described in the record as a **co-equal 50/50 Fab Ai partner** (he runs
+  FLYSABUNCH LLC separately). The Company Agreement covering that split has been drafted since
+  8/14 and is unsigned. **Open question that blocks everything: is Fab Ai actually filed as an
+  LLC, and in what state?** Every draft says "Fab Ai, LLC." If the filing does not exist, that
+  is step zero, and a 50/50 partnership with no entity and no document is the art show's exact
+  starting position.
+- **Eman (Emmanuel Douge)** is the **contract CTO** with ruled authority over how things get
+  built. He has contributed architecture and his own GPU as a production AI lane. His CTO
+  agreement and — critically — the **confirmatory IP assignment for everything already built**
+  are unsigned. Every week of unpapered contribution widens what the assignment has to reach
+  back and cover.
+- **Blue Tile Project** (opened ~2026-09-01 via Andrew): an "agentic partner structure" floated,
+  structure undecided, entity not chosen, seven answers still pending. A nonprofit, pre-launch,
+  no visible funding. This one is live and unformed right now — the cheapest moment to paper it
+  is before anyone builds anything.
+- **The Monday conversations were scheduled for 2026-08-17** and the decisions in
+  `OPEN-DECISIONS.md` are still open. Track that gap honestly when it comes up: the drafts
+  existing is not the same as the deal being papered, and the distance between those two is
+  where both prior businesses were lost.
+
+Never mix the businesses when raising any of this — JCM, Fab Ai, and Stage Directions are
+separate books and separate interests, and SDI is not his company.
 
 ## Limits — be honest about these
 
-Claude is not a lawyer and these templates are not legal advice. They are for getting the terms clear and agreed in writing, which is where deals actually break. Tell Malik plainly to route it to a Texas business attorney before signing when any of these are true:
+Claude is not a lawyer and these templates are not legal advice. They are for getting the terms clear and agreed in writing, which is where deals actually break. Tell Malik plainly to route it to a business attorney before signing when any of these are true:
 
 - Equity, ownership percentages, or forming an entity together
 - Money large enough that losing it would hurt the business
 - Anything with a personal guarantee, non-compete, or indemnity
 - Anyone's name on a bank account, lease, or loan
 - A contract someone else drafted that he's being asked to sign
+
+Governing law is not automatic: **Just Call Malik, LLC is a WYOMING domestic LLC** (filed
+2024-04-11) foreign-qualified in Texas — never describe it as a Texas LLC. The Fab Ai drafts
+assume Texas throughout, which is itself one of the open decisions.
 
 A signed plain-English term sheet is still far better than a handshake, and it makes the attorney cheaper because the thinking is already done. "Not final until a lawyer sees it" is never a reason to leave it verbal in the meantime.
