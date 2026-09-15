@@ -1,0 +1,29 @@
+{
+  "capability": {
+    "id": "measure.creative.score",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Score Creative",
+    "summary": "Turns raw per-channel metrics into one normalised 0-1 score comparable across channels and verticals, with a confidence weight for sample size. A score without confidence causes the system to chase noise, which is worse than not scoring at all.",
+    "owner": "measurement",
+    "maturity": "beta",
+    "capability_tags": ["measure.score"],
+    "side_effects": "internal_write",
+    "idempotent": true,
+    "sla": { "p50_ms": 400, "p95_ms": 1500, "timeout_ms": 20000 },
+    "requires": { "secrets": ["MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "benchmarks", "kind": "http", "title": "Load Vertical Benchmarks", "group": "Score",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/registry/verticals/{{ $json.vertical }}?resolved=true", "auth": "headerAuth" } },
+      { "id": "score", "kind": "code", "title": "Compute Score", "group": "Score",
+        "with": { "code": "// Score = weighted performance against the vertical's own benchmark, damped by confidence.\n// Comparing a plumber's CTR to a SaaS CTR on an absolute scale is meaningless; comparing\n// each to its own vertical benchmark is not.\nconst profile = $json;\nconst rows = $('Envelope In').first().json.payload.metrics || [];\nconst bench = Object.fromEntries((profile.kpis || []).map(k => [k.metric, k.benchmark]));\nconst primary = (profile.kpis || []).filter(k => k.primary).map(k => k.metric);\n\nconst MIN_IMPRESSIONS = 300;\nconst out = rows.map(r => {\n  const parts = [];\n  const add = (metric, value) => { const b = bench[metric]; if (value != null && b) parts.push(Math.min(2, value / b) / 2); };\n  add('engagement_rate', r.engagement_rate);\n  add('click_through_rate', r.ctr);\n  add('conversion_rate', r.cvr);\n  add('watch_through_rate', r.watch_through_rate);\n  const raw = parts.length ? parts.reduce((a, b) => a + b, 0) / parts.length : null;\n  const confidence = Math.min(1, (r.impressions ?? 0) / MIN_IMPRESSIONS);\n  // Shrink toward 0.5 when the sample is thin: an unproven winner is not a winner.\n  const score = raw == null ? null : (raw * confidence) + (0.5 * (1 - confidence));\n  return { ...r, raw_score: raw, confidence, score, decisive: confidence >= 1 && raw != null, primary_kpis: primary };\n});\n\nconst ranked = out.filter(x => x.score != null).sort((a, b) => b.score - a.score);\nreturn [{ json: {\n  scored: out,\n  winner: ranked.find(x => x.decisive) || null,\n  top_decile_threshold: ranked.length >= 10 ? ranked[Math.floor(ranked.length * 0.1)].score : null,\n  note: ranked.some(x => x.decisive) ? null : 'No result has enough impressions to be decisive yet; do not reallocate on this data.'\n} }];" } },
+      { "id": "persist", "kind": "http", "title": "Persist Scores", "group": "Score",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/dam/assets/scores", "auth": "headerAuth", "body": { "scores": "={{ $json.scored }}" } } }
+    ]
+  }
+}

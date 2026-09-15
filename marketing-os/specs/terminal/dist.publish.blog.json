@@ -1,0 +1,36 @@
+{
+  "capability": {
+    "id": "dist.publish.blog",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Publish to Blog / CMS",
+    "summary": "Owned-channel adapter. Publishes as a draft by default and requires an explicit flag to go live — owned properties carry SEO consequences that outlive the campaign.",
+    "owner": "distribution",
+    "maturity": "beta",
+    "capability_tags": ["distribute.publish"],
+    "input_schema": "contracts/publish-request.schema.json",
+    "side_effects": "publish",
+    "idempotent": true,
+    "compensation": "dist.unpublish.blog",
+    "providers": [{ "name": "webhook_cms", "tier": "nano", "cost_per_unit_minor": 0, "unit": "call" }],
+    "sla": { "p50_ms": 1200, "p95_ms": 5000, "timeout_ms": 45000 },
+    "retry": { "max_attempts": 3, "backoff": "exponential", "base_ms": 2500 },
+    "requires": { "secrets": ["CMS_WEBHOOK_URL", "CMS_TOKEN"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "gates", "kind": "guard", "title": "Re-verify Gates", "group": "Publish", "with": { "checks": ["compliance", "brand", "rights", "approval"] } },
+      { "id": "seo", "kind": "code", "title": "SEO Completeness", "group": "Publish",
+        "with": { "code": "// Missing SEO fields are a permanent cost on an owned property, unlike a social post that\n// scrolls away. Block rather than warn.\nconst c = $json.payload.content || {};\nconst missing = ['title', 'body'].filter(f => !c[f]);\nif (!c.meta_description) missing.push('meta_description');\nif (!c.slug) missing.push('slug');\nif (!(c.asset_urls || []).length) missing.push('hero_image');\nif (missing.length) throw new Error('VALIDATION_FAILED: missing required fields for an owned-property publish: ' + missing.join(', '));\nconst slug = String(c.slug).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');\nreturn [{ json: { ...c, slug, canonical: `${$env.CMS_BASE_URL}/${slug}`, structured_data: { '@context': 'https://schema.org', '@type': 'Article', headline: c.title, description: c.meta_description, image: (c.asset_urls || [])[0], datePublished: new Date().toISOString() } } }];" } },
+      { "id": "publish", "kind": "http", "title": "Publish", "group": "Publish",
+        "with": { "method": "POST", "url": "={{ $env.CMS_WEBHOOK_URL }}", "auth": "headerAuth",
+          "body": { "title": "={{ $json.title }}", "slug": "={{ $json.slug }}", "body": "={{ $json.body }}", "meta_description": "={{ $json.meta_description }}", "hero_image": "={{ $json.asset_urls[0] }}", "canonical": "={{ $json.canonical }}", "structured_data": "={{ $json.structured_data }}", "status": "={{ $('Envelope In').first().json.payload.go_live === true ? 'published' : 'draft' }}", "publish_at": "={{ $('Envelope In').first().json.payload.schedule?.at || null }}" } } },
+      { "id": "record", "kind": "http", "title": "Record Publication", "group": "Publish",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/publish", "auth": "headerAuth",
+          "body": { "idempotency_key": "={{ $('Envelope In').first().json.payload.idempotency_key }}", "channel": "blog", "external_id": "={{ $json.id }}", "url": "={{ $('SEO Completeness').first().json.canonical }}", "published_at": "={{ $now.toISO() }}" } } }
+    ]
+  }
+}

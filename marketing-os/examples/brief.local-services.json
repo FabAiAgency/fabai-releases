@@ -1,0 +1,50 @@
+{
+  "_comment": "The Brief produced from the voice note: 'finished the Hebron job today, the old unit was leaking all over the garage floor, got them a new heat pump same day — put something out about it'.",
+  "brief_id": "brf_9f2c41ab77e0",
+  "tenant_id": "tnt_northgate_hvac",
+  "brand_id": "brd_northgate",
+  "vertical": "local_services",
+  "source": { "channel": "telegram", "raw_ref": "4471", "author": "[redacted]", "received_at": "2026-09-15T18:14:22Z" },
+  "objective": "demand_gen",
+  "funnel_stage": "problem_aware",
+  "offer": {
+    "type": "service",
+    "name": "Same-day heat pump replacement",
+    "value_prop": "A failed unit replaced the same day, not next week.",
+    "price": { "model": "quote", "currency": "USD" },
+    "proof": [
+      { "kind": "before_after", "value": "Leaking original unit on a garage floor; new heat pump installed same day", "verified": true },
+      { "kind": "certification", "value": "TACLA licensed", "verified": true }
+    ],
+    "fulfilment": { "mode": "onsite", "geo_scope": "radius", "radius_km": 40 }
+  },
+  "audience": {
+    "description": "Homeowners in and around Hebron whose HVAC is at end of life",
+    "buyer_type": "b2c_household",
+    "pains": ["a unit that has started leaking", "no heating or cooling in the house right now"],
+    "objections": ["how fast can they actually come", "will the price change once they're here", "do they cover my area"],
+    "jobs_to_be_done": ["get the house comfortable again today"]
+  },
+  "message": {
+    "angle": "A failure that looked like a week-long ordeal, finished the same afternoon.",
+    "hooks": ["This was leaking onto a garage floor this morning.", "Same day. Not next week."],
+    "key_claims": [
+      { "text": "Replaced the same day", "substantiation": "Job completed 2026-09-15, Hebron", "risk": "performance" },
+      { "text": "Licensed and insured", "substantiation": "TACLA licence on file", "risk": "none" }
+    ],
+    "differentiators": ["same-day availability", "upfront pricing before work starts"],
+    "must_include": ["Hebron", "licence number"],
+    "must_avoid": ["pricing without conditions"],
+    "cta": { "label": "Check today's availability", "commitment_level": "medium" }
+  },
+  "channels": [
+    { "channel": "google_business", "format": "update", "variants": 1, "priority": 1 },
+    { "channel": "instagram", "format": "reel", "variants": 1, "priority": 2, "aspect_ratio": "9:16", "duration_s": 27 }
+  ],
+  "constraints": { "tone": ["plain-spoken", "reassuring", "local"], "reading_level": 6, "locales": ["en-US"], "compliance_profile": "local_services" },
+  "assets": { "source_preference": "reuse_first", "required_kinds": ["image", "video"] },
+  "kpis": [{ "metric": "calls_and_booked_jobs", "window_days": 14 }],
+  "schedule": { "cadence": "once", "timezone": "America/Chicago" },
+  "confidence": 0.82,
+  "open_questions": []
+}

@@ -1,0 +1,35 @@
+{
+  "capability": {
+    "id": "intake.audio.transcribe",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Transcribe Audio",
+    "summary": "Voice note or audio file in, text out. Nothing else. The original screenshot fused download+transcribe+routing into the trigger workflow; splitting it means every future intake channel (WhatsApp, Slack huddle, phone call, meeting recorder) reuses this untouched.",
+    "owner": "platform",
+    "maturity": "ga",
+    "capability_tags": ["intake.transcribe"],
+    "side_effects": "none",
+    "idempotent": true,
+    "providers": [{ "name": "openai", "model": "whisper-1", "tier": "small", "cost_per_unit_minor": 0.6, "unit": "minute" }],
+    "sla": { "p50_ms": 2500, "p95_ms": 9000, "timeout_ms": 60000 },
+    "retry": { "max_attempts": 3, "backoff": "exponential", "base_ms": 2000 },
+    "requires": { "secrets": ["OPENAI_API_KEY"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 1, "variable_by": ["duration_s"] },
+    "observability": { "slo": "99.0% success over 7d" }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "fetch", "kind": "http", "title": "Fetch Audio", "group": "Acquire",
+        "with": { "method": "GET", "url": "={{ $json.payload.audio_url }}", "response": "file" } },
+      { "id": "transcribe", "kind": "http", "title": "Transcribe", "group": "Transcribe",
+        "with": { "method": "POST", "url": "https://api.openai.com/v1/audio/transcriptions", "auth": "openAiApi",
+          "contentType": "multipart-form-data",
+          "body": { "model": "whisper-1", "response_format": "verbose_json" },
+          "binaryField": "data" } },
+      { "id": "shape", "kind": "code", "title": "Shape Output", "group": "Transcribe",
+        "with": { "code": "const t = $json;\nreturn [{ json: { text: t.text, language: t.language, duration_s: t.duration, segments: (t.segments || []).length } }];" } }
+    ]
+  }
+}

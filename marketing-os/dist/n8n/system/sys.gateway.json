@@ -1,0 +1,651 @@
+{
+  "name": "[system] Omni-channel Gateway",
+  "nodes": [
+    {
+      "id": "n_0024",
+      "name": "Frame · Envelope In",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        490,
+        170
+      ],
+      "parameters": {
+        "content": "## Envelope In",
+        "height": 330,
+        "width": 700,
+        "color": 5
+      }
+    },
+    {
+      "id": "n_0025",
+      "name": "Frame · Gateway",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1170,
+        170
+      ],
+      "parameters": {
+        "content": "## Gateway",
+        "height": 530,
+        "width": 1720,
+        "color": 6
+      }
+    },
+    {
+      "id": "n_0026",
+      "name": "Frame · Handoff",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2530,
+        170
+      ],
+      "parameters": {
+        "content": "## Handoff",
+        "height": 330,
+        "width": 700,
+        "color": 7
+      }
+    },
+    {
+      "id": "n_0027",
+      "name": "Frame · Telemetry Out##0",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2870,
+        370
+      ],
+      "parameters": {
+        "content": "## Telemetry Out",
+        "height": 330,
+        "width": 360,
+        "color": 2
+      }
+    },
+    {
+      "id": "n_0028",
+      "name": "Frame · Telemetry Out##1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        1090
+      ],
+      "parameters": {
+        "content": "## Telemetry Out",
+        "height": 330,
+        "width": 360,
+        "color": 1
+      }
+    },
+    {
+      "id": "n_0029",
+      "name": "Frame · Error & DLQ",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        1530
+      ],
+      "parameters": {
+        "content": "## Error & DLQ",
+        "height": 330,
+        "width": 1040,
+        "color": 3
+      }
+    },
+    {
+      "id": "n_0013",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "webhookId": "wh_0012"
+    },
+    {
+      "id": "n_0015",
+      "name": "Webhook (CRM / commerce / forms)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        500
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mos/intake",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "wh_0014"
+    },
+    {
+      "id": "n_0016",
+      "name": "Scheduled Plays",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        700
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n_0017",
+      "name": "Envelope In",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED preamble — every unit in the estate starts here, identically.\n// Rejects an envelope whose MAJOR version this unit does not implement, rather than\n// half-processing a shape it does not understand.\nconst SUPPORTED_MAJOR = 1;\nconst raw = $json.envelope ?? $json;\nconst v = String(raw.envelope_version ?? '0.0.0');\nif (Number(v.split('.')[0]) !== SUPPORTED_MAJOR) {\n  throw new Error('VALIDATION_FAILED: envelope_version ' + v + ' is not supported by sys.gateway@1.0.0 (needs ' + SUPPORTED_MAJOR + '.x)');\n}\nfor (const f of ['trace_id', 'tenant_id', 'idempotency_key']) {\n  if (!raw[f]) throw new Error('VALIDATION_FAILED: envelope.' + f + ' is required');\n}\nif (raw.deadline_at && Date.parse(raw.deadline_at) < Date.now()) {\n  // Fail fast rather than start work that cannot finish in time.\n  throw new Error('TIMEOUT: deadline_at ' + raw.deadline_at + ' already passed before sys.gateway started');\n}\nreturn [{ json: {\n  ...raw,\n  span_id: 'spn_' + Math.random().toString(36).slice(2, 10),\n  parent_span_id: raw.span_id ?? null,\n  policy: raw.policy ?? {},\n  budget: raw.budget ?? {},\n  provenance: raw.provenance ?? [],\n  _started_at: Date.now(),\n  _capability: \"sys.gateway\",\n  _capability_version: \"1.0.0\"\n} }];"
+      }
+    },
+    {
+      "id": "n_0018",
+      "name": "Span Start",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED telemetry — span_start.\nconst e = $json;\nreturn [{ json: { ...e, _telemetry: {\n  event_id: 'evt_' + Math.random().toString(36).slice(2, 12),\n  trace_id: e.trace_id, span_id: e.span_id, parent_span_id: e.parent_span_id,\n  tenant_id: e.tenant_id, brand_id: e.brand_id ?? null, vertical: e.vertical ?? null,\n  capability: \"sys.gateway\", capability_version: \"1.0.0\",\n  layer: \"system\", stage: e.stage ?? null,\n  event: 'span_start', at: new Date().toISOString()\n} } }];"
+      }
+    },
+    {
+      "id": "n_0001",
+      "name": "Identify Tenant & Source",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Tenancy is established HERE and nowhere else. Everything downstream trusts envelope.tenant_id\n// absolutely, so this is the one place that must get it right.\nconst trigger = $execution?.customData?.get?.('trigger') || $json.__trigger || 'unknown';\nconst TENANT_MAP = JSON.parse($env.MOS_TENANT_MAP || '{}');\n\nlet source_channel = 'api', external_id = null, text = '', raw = $json;\n\nif ($json.message || $json.callback_query) {\n  source_channel = 'telegram';\n  external_id = String($json.message?.chat?.id ?? $json.callback_query?.message?.chat?.id ?? '');\n  text = $json.message?.text || $json.message?.caption || '';\n} else if ($json.headers) {\n  source_channel = $json.body?.source || 'webhook';\n  external_id = $json.headers['x-mos-tenant'] || $json.body?.tenant_id || null;\n  text = $json.body?.text || $json.body?.prompt || '';\n  raw = $json.body;\n} else if ($json.__schedule) {\n  source_channel = 'schedule';\n  external_id = $json.tenant_id;\n  text = $json.prompt || '';\n}\n\nconst tenant = TENANT_MAP[`${source_channel}:${external_id}`] || TENANT_MAP[external_id] || null;\nif (!tenant) {\n  throw new Error(`POLICY_BLOCKED: unrecognised source ${source_channel}:${external_id} — refusing to process work for an unmapped tenant`);\n}\n\nreturn [{ json: { source_channel, external_id, text, raw, tenant } }];"
+      }
+    },
+    {
+      "id": "n_0002",
+      "name": "Mint Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// One envelope, minted once, carried everywhere. Its policy block is the CEILING for this run:\n// downstream units may narrow it, never widen it.\nconst crypto = require('crypto');\nconst s = $json;\nconst t = s.tenant;\nconst trace_id = 'trc_' + crypto.randomUUID().replace(/-/g, '').slice(0, 20);\nconst idem = crypto.createHash('sha256').update([t.tenant_id, s.source_channel, s.external_id, s.text, new Date().toISOString().slice(0, 13)].join('|')).digest('hex');\n\nreturn [{ json: {\n  envelope_version: '1.0.0',\n  trace_id,\n  span_id: 'spn_' + crypto.randomUUID().slice(0, 8),\n  parent_span_id: null,\n  tenant_id: t.tenant_id,\n  brand_id: t.default_brand_id || null,\n  vertical: t.vertical || 'generic',\n  locale: t.locale || 'en-US',\n  region: t.region || 'us',\n  intent: 'intake.received',\n  stage: 'intake',\n  idempotency_key: idem,\n  attempt: 1,\n  max_attempts: 3,\n  deadline_at: new Date(Date.now() + (t.deadline_minutes ?? 30) * 60000).toISOString(),\n  policy: {\n    autonomy_level: t.autonomy_level || 'publish_with_approval',\n    compliance_profile: t.compliance_profile || 'standard',\n    approval_mode: t.approval_mode || 'channel_conditional',\n    data_residency: t.data_residency || 'any',\n    pii_redaction: t.pii_redaction !== false,\n    allow_external_research: t.allow_external_research !== false,\n    model_tier_cap: t.model_tier_cap || 'frontier'\n  },\n  budget: {\n    currency: t.currency || 'USD',\n    cap_minor_units: t.run_budget_minor_units ?? 2000,\n    spent_minor_units: 0,\n    soft_limit_pct: 0.8,\n    on_soft_limit: 'downgrade_tier'\n  },\n  routing: {},\n  payload: { source_channel: s.source_channel, raw: s.raw, text: s.text, reply_to: s.external_id },\n  provenance: [],\n  error: null\n} }];"
+      }
+    },
+    {
+      "id": "n_0003",
+      "name": "Duplicate Request?",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1940,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.MOS_STATE_URL }}/runs/by-idempotency/{{ $json.idempotency_key }}",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0005",
+      "name": "Already Running?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2280,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c_0004",
+              "leftValue": "={{ !$json.trace_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "n_0006",
+      "name": "Run Orchestrator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2620,
+        300
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "sys.orchestrator",
+          "mode": "id",
+          "cachedResultName": "sys.orchestrator"
+        },
+        "mode": "once",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envelope": "={{ $json }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "n_0007",
+      "name": "Reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2960,
+        300
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Mint Envelope').first().json.payload.reply_to }}",
+        "additionalFields": {},
+        "text": "={{ $json.human_summary || 'Done.' }}"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0011",
+      "name": "Duplicate — No-op",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2620,
+        500
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a_0008",
+              "name": "status",
+              "value": "duplicate_ignored",
+              "type": "string"
+            },
+            {
+              "id": "a_0009",
+              "name": "existing_trace_id",
+              "value": "={{ $json.trace_id }}",
+              "type": "string"
+            },
+            {
+              "id": "a_0010",
+              "name": "note",
+              "value": "The same request within the same hour returns the in-flight run instead of starting a second one. Double-posting is the failure mode users notice most.",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n_0019",
+      "name": "Provenance & Span End",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2960,
+        500
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED epilogue — appends exactly one provenance entry and closes the span.\n// Provenance is append-only; nothing in the estate is permitted to rewrite an earlier entry.\nconst e = $('Envelope In').first().json;\nconst out = $json;\nconst duration = Date.now() - (e._started_at ?? Date.now());\nconst entry = {\n  capability: \"sys.gateway\",\n  version: \"1.0.0\",\n  at: new Date().toISOString(),\n  duration_ms: duration,\n  model: out._model ?? null,\n  provider: out._provider ?? null,\n  cost_minor_units: out._cost_minor_units ?? 0,\n  inputs_hash: e.idempotency_key,\n  decision_id: out.decision?.decision_id ?? null\n};\nreturn [{ json: {\n  ...out,\n  _envelope: {\n    ...e,\n    span_id: e.parent_span_id,\n    provenance: [...(e.provenance ?? []), entry],\n    budget: { ...(e.budget ?? {}), spent_minor_units: (e.budget?.spent_minor_units ?? 0) + (entry.cost_minor_units ?? 0) }\n  },\n  _telemetry: {\n    event_id: 'evt_' + Math.random().toString(36).slice(2, 12),\n    trace_id: e.trace_id, span_id: e.span_id, tenant_id: e.tenant_id,\n    capability: \"sys.gateway\", capability_version: \"1.0.0\",\n    layer: \"system\", event: 'span_end', status: out.error ? 'error' : 'ok',\n    duration_ms: duration, cost_minor_units: entry.cost_minor_units,\n    error_code: out.error?.code ?? null, at: new Date().toISOString()\n  }\n} }];"
+      }
+    },
+    {
+      "id": "n_0020",
+      "name": "Emit Telemetry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        1220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_TELEMETRY_URL }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._telemetry) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0021",
+      "name": "On Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        1660
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "n_0022",
+      "name": "Park to DLQ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        580,
+        1660
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_STATE_URL }}/dlq",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  capability: \"sys.gateway\",\n  capability_version: \"1.0.0\",\n  trace_id: $json.execution?.id,\n  error: { message: $json.execution?.error?.message, node: $json.execution?.lastNodeExecuted, stack: $json.execution?.error?.stack },\n  envelope: $json.execution?.data,\n  replayable: true,\n  at: new Date().toISOString()\n}) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0023",
+      "name": "Notify Ops",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        920,
+        1660
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $env.MOS_OPS_CHAT_ID }}",
+        "text": "=Run failed in sys.gateway\n{{ $json.execution?.error?.message }}\nNode: {{ $json.execution?.lastNodeExecuted }}\nReplay: mos replay {{ $json.execution?.id }}",
+        "additionalFields": {}
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Identify Tenant & Source": {
+      "main": [
+        [
+          {
+            "node": "Mint Envelope",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mint Envelope": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Request?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Request?": {
+      "main": [
+        [
+          {
+            "node": "Already Running?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Already Running?": {
+      "main": [
+        [
+          {
+            "node": "Run Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Duplicate — No-op",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Orchestrator": {
+      "main": [
+        [
+          {
+            "node": "Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram": {
+      "main": [
+        [
+          {
+            "node": "Envelope In",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook (CRM / commerce / forms)": {
+      "main": [
+        [
+          {
+            "node": "Envelope In",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scheduled Plays": {
+      "main": [
+        [
+          {
+            "node": "Envelope In",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envelope In": {
+      "main": [
+        [
+          {
+            "node": "Span Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Span Start": {
+      "main": [
+        [
+          {
+            "node": "Identify Tenant & Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provenance & Span End": {
+      "main": [
+        [
+          {
+            "node": "Emit Telemetry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate — No-op": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Error": {
+      "main": [
+        [
+          {
+            "node": "Park to DLQ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Park to DLQ": {
+      "main": [
+        [
+          {
+            "node": "Notify Ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "errorWorkflow": "",
+    "timezone": "UTC",
+    "executionTimeout": 30
+  },
+  "tags": [
+    {
+      "name": "mos:system"
+    },
+    {
+      "name": "mos:ga"
+    },
+    {
+      "name": "tag:system.gateway"
+    }
+  ],
+  "meta": {
+    "mos": {
+      "capability_id": "sys.gateway",
+      "version": "1.0.0",
+      "layer": "system",
+      "owner": "platform",
+      "side_effects": "external_write",
+      "idempotent": true,
+      "compensation": null,
+      "verticals": "*",
+      "compiled_at": null,
+      "compiled_from": "specs/system/sys.gateway.json",
+      "extends": null,
+      "generated": "Compiled by marketing-os/compiler. Edit the spec, not this file — canvas edits are overwritten on the next build."
+    }
+  },
+  "pinData": {}
+}

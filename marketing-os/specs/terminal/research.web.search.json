@@ -1,0 +1,38 @@
+{
+  "capability": {
+    "id": "research.web.search",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Web Research",
+    "summary": "Bounded external research with source capture. Returns findings WITH urls so downstream copy can cite rather than assert — the single cheapest defence against a confident, wrong, published claim.",
+    "owner": "intelligence",
+    "maturity": "ga",
+    "capability_tags": ["research.market"],
+    "side_effects": "none",
+    "idempotent": true,
+    "providers": [
+      { "name": "tavily", "tier": "small", "cost_per_unit_minor": 1, "unit": "call" },
+      { "name": "serper", "tier": "small", "cost_per_unit_minor": 1, "unit": "call" }
+    ],
+    "sla": { "p50_ms": 2000, "p95_ms": 8000, "timeout_ms": 30000 },
+    "retry": { "max_attempts": 3, "backoff": "exponential", "base_ms": 1500 },
+    "requires": { "secrets": ["TAVILY_API_KEY"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 1, "variable_by": ["max_results"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "policy", "kind": "if", "title": "Research Allowed?", "group": "Guard",
+        "with": { "condition": "={{ $json.policy?.allow_external_research !== false }}" },
+        "next": { "true": "search", "false": "skip" } },
+      { "id": "search", "kind": "http", "title": "Search", "group": "Research",
+        "with": { "method": "POST", "url": "https://api.tavily.com/search", "auth": "headerAuth",
+          "body": { "query": "={{ $json.payload.query }}", "max_results": "={{ $json.payload.max_results || 6 }}", "search_depth": "advanced", "include_answer": true } } },
+      { "id": "distil", "next": null, "kind": "code", "title": "Distil Findings", "group": "Research",
+        "with": { "code": "const r = $json;\nconst findings = (r.results || []).map(x => ({\n  claim: (x.content || '').slice(0, 600),\n  source_url: x.url,\n  source_title: x.title,\n  score: x.score ?? null,\n  retrieved_at: new Date().toISOString()\n}));\nreturn [{ json: {\n  summary: r.answer || null,\n  findings,\n  source_count: findings.length,\n  // Downstream copy generation reads this: no findings means write from the brief only,\n  // never from the model's own recollection of the market.\n  citable: findings.length > 0\n} }];" } },
+      { "id": "skip", "kind": "set", "title": "Skipped", "group": "Guard",
+        "with": { "assignments": { "summary": null, "findings": [], "source_count": 0, "citable": false, "skipped_reason": "external_research_disabled_by_policy" } } }
+    ]
+  }
+}

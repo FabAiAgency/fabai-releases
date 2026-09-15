@@ -1,0 +1,63 @@
+{
+  "capability": {
+    "id": "copy.longform.generate",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Generate Long-form Copy",
+    "summary": "Blog posts, articles, case studies, PDP copy, email sequences, one-pagers. Structure comes from the brief and the vertical profile, never from a hard-coded template inside the workflow.",
+    "owner": "content",
+    "maturity": "ga",
+    "capability_tags": ["produce.copy.longform"],
+    "side_effects": "none",
+    "idempotent": true,
+    "providers": [
+      { "name": "anthropic", "model": "claude-sonnet-5", "tier": "standard", "cost_per_unit_minor": 6, "unit": "call" },
+      { "name": "openai", "model": "gpt-4.1", "tier": "standard", "cost_per_unit_minor": 6, "unit": "call" }
+    ],
+    "sla": { "p50_ms": 12000, "p95_ms": 45000, "timeout_ms": 120000 },
+    "retry": { "max_attempts": 2, "backoff": "exponential", "base_ms": 4000 },
+    "requires": { "secrets": ["ANTHROPIC_API_KEY"], "capabilities": ["research.web.search"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 6, "variable_by": ["locales", "word_count"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "channel_spec", "kind": "code", "title": "Resolve Channel Spec", "group": "Context",
+        "with": { "code": "// Length, required fields and limits come from registry/channels.json, injected at compile\n// time as CHANNELS. A platform changing its limit is a registry edit, not a workflow edit.\nconst CHANNELS = $execution.customData?.get?.('channels') ?? JSON.parse($env.MOS_CHANNELS || '{}');\nconst b = $json.payload.brief;\nconst slot = $json.payload.slot || b.channels[0];\nconst spec = CHANNELS[slot.channel]?.formats?.[slot.format] || {};\nreturn [{ json: { slot, spec, brief: b, research: $json.payload.research || null, profile: $json.payload.profile || {} } }];" } },
+      { "id": "write", "kind": "agent", "title": "Long-form Writer", "group": "Content Generation",
+        "with": {
+          "role": "copy.longform",
+          "memory": "none",
+          "tools": ["research.web.search"],
+          "system": "You write long-form marketing copy from a Brief.\n\nNON-NEGOTIABLE\n- Every factual claim traces to the Brief, the research findings, or a tool call you make. If you cannot source it, write the weaker sentence that is true.\n- Obey the vertical profile's lexicon: use `prefer`, never use `banned`, and avoid `avoid` unless the Brief overrides it explicitly.\n- Honour the channel spec's minimums, maximums and required fields exactly.\n- One controlling angle throughout. Support it; do not hedge it with a second thesis.\n- Claims tagged `regulated` in the Brief keep their qualifiers. Do not tighten them into something punchier.\n\nVOICE\n{{ $json.profile.prompt_fragments?.voice }}\n\nPROOF\n{{ $json.profile.prompt_fragments?.proof_instruction }}\n\nLEXICON\nprefer: {{ ($json.profile.message?.lexicon?.prefer || []).join(', ') }}\navoid: {{ ($json.profile.message?.lexicon?.avoid || []).join(', ') }}\nbanned: {{ ($json.profile.message?.lexicon?.banned || []).join(', ') }}\n\nCHANNEL SPEC\n{{ JSON.stringify($json.spec) }}",
+          "prompt": "BRIEF:\n{{ JSON.stringify($json.brief) }}\n\nRESEARCH FINDINGS (cite these, do not exceed them):\n{{ JSON.stringify($json.research) }}\n\nSTRUCTURE REQUESTED: {{ $json.slot.structure || 'best fit for the channel and objective' }}",
+          "structured": {
+            "type": "object",
+            "required": ["title", "body"],
+            "properties": {
+              "title": { "type": "string" },
+              "subtitle": { "type": "string" },
+              "body": { "type": "string", "description": "Markdown." },
+              "meta_description": { "type": "string" },
+              "slug": { "type": "string" },
+              "key_takeaways": { "type": "array", "items": { "type": "string" } },
+              "citations": { "type": "array", "items": { "type": "object", "properties": { "claim": { "type": "string" }, "source_url": { "type": "string" } } } },
+              "word_count": { "type": "integer" },
+              "shard_seeds": { "type": "array", "items": { "type": "string" }, "description": "Self-contained ideas from this piece, each strong enough to become a standalone short post. This is what makes one long-form run feed an entire channel mix." }
+            }
+          }
+        } },
+      { "id": "lint", "kind": "code", "title": "Lexicon & Length Lint", "group": "Content Generation",
+        "with": { "code": "// Deterministic checks first — free, instant, and they catch most of what a reviewer would.\nconst out = $json.output || $json;\nconst profile = $('Resolve Channel Spec').first().json.profile || {};\nconst spec = $('Resolve Channel Spec').first().json.spec || {};\nconst lex = profile.message?.lexicon || {};\nconst text = [out.title, out.subtitle, out.body].filter(Boolean).join('\\n');\nconst lower = text.toLowerCase();\n\nconst violations = [];\nfor (const term of (lex.banned || [])) if (lower.includes(term.toLowerCase())) violations.push({ severity: 'block', term });\nfor (const term of (lex.avoid || [])) if (lower.includes(term.toLowerCase())) violations.push({ severity: 'warn', term });\n\nconst words = text.split(/\\s+/).filter(Boolean).length;\nif (spec.min_words && words < spec.min_words) violations.push({ severity: 'warn', rule: 'below_min_words', words, min: spec.min_words });\nif (spec.max_chars && text.length > spec.max_chars) violations.push({ severity: 'block', rule: 'over_max_chars', chars: text.length, max: spec.max_chars });\nfor (const field of (spec.requires || [])) if (!out[field]) violations.push({ severity: 'block', rule: 'missing_required_field', field });\n\nreturn [{ json: { ...out, word_count: words, lint: { violations, blocked: violations.some(v => v.severity === 'block') } } }];" } },
+      { "id": "retry_gate", "kind": "if", "title": "Lint Clean?", "group": "Content Generation",
+        "with": { "condition": "={{ !$json.lint.blocked }}" },
+        "next": { "true": null, "false": "repair" } },
+      { "id": "repair", "kind": "llm", "title": "Repair Violations", "group": "Content Generation",
+        "with": { "role": "copy.longform",
+          "system": "Fix ONLY the listed violations. Preserve the angle, the structure and every sourced claim. Change the minimum number of words required.",
+          "prompt": "COPY:\n{{ JSON.stringify($json) }}\n\nVIOLATIONS:\n{{ JSON.stringify($json.lint.violations) }}",
+          "structured": { "type": "object", "properties": { "title": { "type": "string" }, "subtitle": { "type": "string" }, "body": { "type": "string" }, "meta_description": { "type": "string" }, "slug": { "type": "string" } } } } }
+    ]
+  }
+}

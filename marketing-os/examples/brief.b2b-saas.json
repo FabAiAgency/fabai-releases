@@ -1,0 +1,52 @@
+{
+  "_comment": "The SAME sentence shape — 'we finished the migration for a customer, it went well, put something out about it' — for a B2B software tenant. Same schema, same workflows, a materially different campaign.",
+  "brief_id": "brf_44d1c8e30a92",
+  "tenant_id": "tnt_relayworks",
+  "brand_id": "brd_relay",
+  "vertical": "b2b_saas",
+  "source": { "channel": "slack", "raw_ref": "1757960061.4412", "author": "[redacted]", "received_at": "2026-09-15T18:14:22Z" },
+  "objective": "conversion",
+  "funnel_stage": "solution_aware",
+  "offer": {
+    "type": "subscription",
+    "name": "Relay Workflow Platform",
+    "value_prop": "Migrate off the legacy scheduler without a freeze window.",
+    "price": { "model": "recurring", "currency": "USD" },
+    "proof": [
+      { "kind": "case_study", "value": "Migrated 240 active pipelines with no scheduled downtime", "verified": true },
+      { "kind": "stat", "value": "Cutover completed in 6 days against a 6-week internal estimate", "source_url": null, "verified": true },
+      { "kind": "certification", "value": "SOC 2 Type II", "verified": true }
+    ]
+  },
+  "audience": {
+    "description": "Platform and data engineering leads running a legacy scheduler they are afraid to touch",
+    "buyer_type": "b2b_midmarket",
+    "roles": ["platform engineering lead", "VP engineering", "IT security", "procurement"],
+    "pains": ["a scheduler nobody wants to be on call for", "a migration that needs a freeze window nobody will approve"],
+    "objections": ["migration will break things", "security review will kill it", "we could build this internally"],
+    "jobs_to_be_done": ["retire the legacy scheduler without an incident"]
+  },
+  "message": {
+    "angle": "The migration everyone assumed needed a freeze window did not need one.",
+    "hooks": ["240 pipelines. No freeze window.", "The six-week estimate was six days."],
+    "key_claims": [
+      { "text": "240 active pipelines migrated with no scheduled downtime", "substantiation": "Customer cutover log, consented for use", "risk": "performance" },
+      { "text": "SOC 2 Type II", "substantiation": "Current report on file", "risk": "regulated" }
+    ],
+    "differentiators": ["dual-write cutover", "rollback at any point in the migration"],
+    "must_include": ["how the cutover actually works"],
+    "must_avoid": ["guaranteed ROI", "10x"],
+    "cta": { "label": "See the migration path for your setup", "commitment_level": "medium" }
+  },
+  "channels": [
+    { "channel": "linkedin", "format": "post", "variants": 3, "priority": 1 },
+    { "channel": "blog", "format": "article", "variants": 1, "priority": 1 },
+    { "channel": "email", "format": "broadcast", "variants": 1, "priority": 2 }
+  ],
+  "constraints": { "tone": ["precise", "peer-to-peer", "low hype, high specificity"], "reading_level": 10, "locales": ["en-US"], "compliance_profile": "standard" },
+  "assets": { "source_preference": "reuse_first", "required_kinds": ["image"] },
+  "kpis": [{ "metric": "demo_requests", "window_days": 30 }, { "metric": "qualified_pipeline", "window_days": 90 }],
+  "schedule": { "cadence": "once", "timezone": "UTC" },
+  "confidence": 0.88,
+  "open_questions": ["Is the customer named, or does this stay anonymised?"]
+}

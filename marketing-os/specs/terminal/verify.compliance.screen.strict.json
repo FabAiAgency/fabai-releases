@@ -1,0 +1,20 @@
+{
+  "extends": "verify.compliance.screen",
+  "capability": {
+    "id": "verify.compliance.screen.strict",
+    "version": "1.0.0",
+    "title": "Compliance Screen — Strict",
+    "summary": "Bound by regulated verticals. Escalates the judgement model, treats every `warn` as a hold, and requires a named human reviewer role. Same pipeline, stricter thresholds — the difference between regulated and unregulated is configuration, not a second codebase.",
+    "capability_tags": ["verify.compliance"],
+    "verticals": ["health_wellness"],
+    "side_effects": "none",
+    "idempotent": true,
+    "providers": [{ "name": "anthropic", "model": "claude-sonnet-5", "tier": "standard", "cost_per_unit_minor": 3, "unit": "call" }]
+  },
+  "overrides": {
+    "model_screen": { "role_override": "reasoning.planner" },
+    "verdict": {
+      "code_append": "\n// Strict mode: a warn is a hold, not an annotation, and a human reviewer is named.\nconst v = $json ?? {};\nif (v.status === 'warn') { v.status = 'fail'; v.may_proceed = false; v.escalated_from = 'warn'; }\nv.required_reviewer_role = 'clinical_reviewer';\nreturn [{ json: v }];"
+    }
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "version": "1.0.0",
+  "description": "Capabilities the registry and policies REFERENCE but that are not yet implemented as specs. Declaring them here is deliberate: the routing table can name a future adapter, the validator downgrades it from an error to a tracked gap, and nobody discovers the hole at runtime. Removing an entry from this file without adding its spec turns the build red.",
+  "planned": [
+    {
+      "id": "dist.publish.meta",
+      "tag": "distribute.publish",
+      "title": "Meta (Instagram / Facebook) adapter",
+      "blocked_on": "Meta Graph API app review for content publishing",
+      "effort": "M",
+      "note": "Highest-value missing adapter for e-commerce and local verticals."
+    },
+    {
+      "id": "dist.publish.tiktok",
+      "tag": "distribute.publish",
+      "title": "TikTok adapter",
+      "blocked_on": "TikTok Content Posting API access",
+      "effort": "M"
+    },
+    {
+      "id": "dist.publish.youtube",
+      "tag": "distribute.publish",
+      "title": "YouTube adapter",
+      "blocked_on": "OAuth scopes + quota",
+      "effort": "M"
+    },
+    {
+      "id": "dist.publish.x",
+      "tag": "distribute.publish",
+      "title": "X adapter",
+      "blocked_on": "API tier decision",
+      "effort": "S"
+    },
+    {
+      "id": "dist.publish.gbp",
+      "tag": "distribute.publish",
+      "title": "Google Business Profile adapter",
+      "blocked_on": "nothing \u2014 next to build",
+      "effort": "S",
+      "note": "local_services binds distribute.publish to this. Until it exists that vertical falls through to its policy-table channel adapters."
+    },
+    {
+      "id": "dist.publish.catalog",
+      "tag": "distribute.publish",
+      "title": "Marketplace / PDP adapter",
+      "blocked_on": "per-marketplace credentials",
+      "effort": "L"
+    },
+    {
+      "id": "dist.publish.ads_meta",
+      "tag": "distribute.publish",
+      "title": "Meta Ads adapter",
+      "blocked_on": "spend approval workflow sign-off",
+      "effort": "L",
+      "note": "Paid channels carry a mandatory approval gate; do not ship this adapter before the gate is proven in production on organic."
+    },
+    {
+      "id": "research.product.catalog",
+      "tag": "research.product",
+      "title": "Catalogue-specialised product research",
+      "blocked_on": "nothing \u2014 specialisation of research.product.fetch",
+      "effort": "S",
+      "note": "Referenced by ecommerce_dtc capability_bindings; falls back to research.product.fetch until built."
+    },
+    {
+      "id": "sys.assistant.answer",
+      "tag": "system.answer",
+      "title": "Q&A path for `question` intents",
+      "blocked_on": "nothing",
+      "effort": "S",
+      "note": "sub.intake routes questions here today by setting a handoff marker."
+    },
+    {
+      "id": "approve.human.resolve",
+      "tag": "approve.human",
+      "title": "Inbound approval-response handler",
+      "blocked_on": "nothing",
+      "effort": "S"
+    },
+    {
+      "id": "ops.dlq.park",
+      "tag": "ops.dlq",
+      "title": "Dead-letter park & replay",
+      "blocked_on": "nothing",
+      "effort": "M",
+      "note": "The compiler currently routes errors to a webhook; a first-class DLQ capability replaces that."
+    },
+    {
+      "id": "sub.strategy",
+      "tag": "subsystem.strategy",
+      "title": "Strategy & Calendar subsystem",
+      "blocked_on": "measurement data volume",
+      "effort": "L",
+      "note": "Multi-run planning: calendars, cadence, seasonality. Today plan.campaign.compose handles single runs only."
+    }
+  ],
+  "uncompensable": [
+    {
+      "id": "dist.publish.telegram",
+      "rationale": "A delivered message cannot be recalled. Mitigated by a mandatory gate re-check inside the adapter and an idempotency record."
+    },
+    {
+      "id": "dist.publish.email",
+      "rationale": "A sent broadcast cannot be recalled. Mitigated by mandatory approval, suppression checks and a deliverability preflight."
+    },
+    {
+      "id": "asset.ledger.append",
+      "rationale": "The run ledger is append-only by design. Deleting a row to 'undo' a logged event would destroy the audit trail that makes every other rollback explicable."
+    },
+    {
+      "id": "intake.clarification.request",
+      "rationale": "A question already read by a human cannot be unasked. Harmless by construction: it produces no public artefact and spends nothing."
+    }
+  ]
+}

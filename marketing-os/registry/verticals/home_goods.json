@@ -1,0 +1,106 @@
+{
+  "id": "home_goods",
+  "title": "Home Goods / Furniture / Interiors",
+  "extends": "ecommerce_dtc",
+  "description": "A physical-goods vertical that behaves nothing like fast DTC: high ticket, long deliberation, spatial imagination, and a return that costs a freight shipment. Inherits e-commerce mechanics, overrides the psychology.",
+
+  "taxonomy": {
+    "offer_types": ["product_physical", "bundle", "service"],
+    "buyer_type_default": "b2c_household",
+    "buying_cycle_days": 45,
+    "decision_makers": ["primary shopper", "partner / household veto", "installer or designer"],
+    "purchase_triggers": ["move or renovation", "a thing broke", "seasonal refresh", "hosting deadline", "a room that never worked", "sale on a saved item"],
+    "geo_scope_default": "national",
+    "seasonality": [
+      { "window": "spring_refresh", "modifier": 1.6 },
+      { "window": "labor_day_and_president_day_sales", "modifier": 2.2, "note": "Furniture's real peaks are the mattress-and-sofa sale weekends, not BFCM." },
+      { "window": "pre_holiday_hosting", "modifier": 1.8 },
+      { "window": "january_organisation", "modifier": 1.5 }
+    ]
+  },
+
+  "message": {
+    "proof_types": ["before_after", "review_score", "warranty", "certification", "testimonial", "press"],
+    "objection_library": ["will it fit the room", "will it match what I already own", "is it comfortable / does it feel cheap", "delivery and assembly hassle", "what if it doesn't work — return cost", "is it durable with kids or pets", "lead time is months"],
+    "angle_library": ["room transformation", "the measurement problem solved", "material deep-dive", "how it lives with kids/pets", "small-space solution", "designer's reasoning", "one piece, five ways", "the cheap version vs this"],
+    "lexicon": {
+      "prefer": ["exact dimensions", "material and fill", "weight capacity", "care instructions", "lead time in weeks", "room type"],
+      "avoid": ["curated", "elevate your space", "effortless luxury", "statement piece"],
+      "banned": ["lasts forever", "indestructible", "free delivery" ]
+    },
+    "tone_default": ["warm", "practical", "design-literate without jargon"],
+    "reading_level": 7
+  },
+
+  "channels": {
+    "weights": { "instagram": 0.28, "email": 0.2, "blog": 0.15, "product_listing": 0.15, "youtube": 0.12, "tiktok": 0.1 },
+    "formats": { "instagram": ["carousel", "feed_image", "reel"], "email": ["broadcast"], "blog": ["article"], "youtube": ["long", "short"], "product_listing": ["pdp_copy", "gallery"] }
+  },
+
+  "creative": {
+    "image_style": "styled interior with believable daylight from a real window direction, accurate scale against human-sized reference objects, honest material texture (grain, weave, stitch), lived-in not showroom-sterile",
+    "image_negative": "impossible room geometry, furniture floating off the floor, doorways to nowhere, warped perspective, inconsistent light direction, plants that defy gravity, mismatched shadow angles",
+    "video_style": "slow considered camera movement, room-scale reveal, close-ups on material and joinery, real hands using the piece",
+    "shot_grammar": ["the room's problem", "wide reveal with the piece in place", "scale reference with a person", "material close-up", "detail that justifies the price", "how it handles real life", "cta with dimensions on screen"],
+    "aspect_ratios": ["4:5", "1:1", "9:16", "16:9"],
+    "default_duration_s": 30,
+    "voice": { "gender": "neutral", "pace": "measured", "style": "calm and reassuring" },
+    "asset_reuse_bias": 0.55
+  },
+
+  "compliance": { "profile": "standard", "regulated_claims": ["fire retardancy", "sustainability and FSC claims", "country of origin", "warranty terms", "delivery timeframes"], "review_mode": "sampled" },
+
+  "kpis": [
+    { "metric": "assisted_revenue", "primary": true, "benchmark": null },
+    { "metric": "saves_and_shares", "primary": true, "benchmark": 0.05, "note_ref": "In long-cycle home goods, saves predict revenue better than clicks do." },
+    { "metric": "return_rate", "primary": false, "benchmark": 0.08 },
+    { "metric": "add_to_cart_rate", "primary": false, "benchmark": 0.04 }
+  ],
+
+  "capability_bindings": {
+    "produce.image.prompt": "prompt.image.compose.lifestyle_room",
+    "assemble.video": "media.video.render.explainer_wide"
+  },
+
+  "plays": [
+    {
+      "id": "room_transformation",
+      "title": "Before/after room transformation",
+      "objective": "demand_gen",
+      "when": "The piece is best understood in context, or the SKU has a weak standalone hero shot.",
+      "steps": [
+        { "tag": "plan.brief" },
+        { "tag": "asset.search", "with": { "filter": "same_sku_or_room_type" } },
+        { "tag": "produce.image.prompt", "with": { "pair": "before_and_after", "lock": "room geometry and light direction across both frames" } },
+        { "tag": "produce.image", "with": { "variants": 2 } },
+        { "tag": "produce.copy.short", "with": { "include": "dimensions and lead time" } },
+        { "tag": "verify.brand" },
+        { "tag": "distribute.publish", "with": { "fan_out": "per_channel" } },
+        { "tag": "asset.log" }
+      ],
+      "expected_kpi": "saves_and_shares"
+    },
+    {
+      "id": "fit_and_measure",
+      "title": "Answer the measurement objection",
+      "objective": "conversion",
+      "when": "Return data or support tickets point at sizing and fit.",
+      "steps": [
+        { "tag": "research.product", "with": { "source": "catalog_dimensions_and_returns_reasons" } },
+        { "tag": "produce.copy.longform", "with": { "structure": "measuring guide" } },
+        { "tag": "produce.image", "with": { "set": "scale_diagram", "variants": 3 } },
+        { "tag": "produce.copy.short", "with": { "derive_from": "longform" } },
+        { "tag": "verify.compliance" },
+        { "tag": "distribute.publish" }
+      ],
+      "expected_kpi": "return_rate"
+    }
+  ],
+
+  "prompt_fragments": {
+    "voice": "Speak like a shop owner who knows the joinery and also knows the buyer has a tape measure and a partner to convince. Practical reassurance beats aspiration.",
+    "proof_instruction": "Dimensions, materials, weight capacity, warranty length and lead time are proof. Use them early — they are the objections in disguise.",
+    "visual_instruction": "Keep one consistent light direction and one consistent room geometry across every frame in a set. Include a human-scale reference. Material texture must be visible at 100% crop.",
+    "objection_instruction": "Name the fit, delivery and durability questions before the buyer has to ask. In this category, unanswered logistics is the number one reason a saved item never converts."
+  }
+}

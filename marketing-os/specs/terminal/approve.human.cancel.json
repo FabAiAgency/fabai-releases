@@ -1,0 +1,70 @@
+{
+  "capability": {
+    "id": "approve.human.cancel",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Cancel Approval Request",
+    "summary": "Compensation for approve.human.request. Withdraws a pending request when the run is abandoned upstream, so a reviewer is never asked to approve something that no longer exists.",
+    "owner": "platform",
+    "maturity": "ga",
+    "capability_tags": [
+      "compensate.approve.human"
+    ],
+    "side_effects": "external_write",
+    "idempotent": true,
+    "compensation": null,
+    "sla": {
+      "p50_ms": 800,
+      "p95_ms": 4000,
+      "timeout_ms": 30000
+    },
+    "retry": {
+      "max_attempts": 5,
+      "backoff": "exponential",
+      "base_ms": 2000
+    },
+    "requires": {
+      "secrets": [
+        "MOS_STATE_URL",
+        "TELEGRAM_BOT_TOKEN"
+      ]
+    },
+    "verticals": "*",
+    "cost_model": {
+      "estimate_minor_units": 0
+    },
+    "observability": {
+      "slo": "99.9% — a compensation that fails leaves the system inconsistent, which is worse than the original failure"
+    }
+  },
+  "n8n": {
+    "trigger": {
+      "kind": "executeWorkflow"
+    },
+    "nodes": [
+      {
+        "id": "cancel",
+        "kind": "http",
+        "title": "Cancel Approval",
+        "group": "Compensate",
+        "with": {
+          "method": "DELETE",
+          "url": "={{ $env.MOS_STATE_URL }}/approvals/{{ $json.payload.approval_id }}",
+          "auth": "headerAuth"
+        }
+      },
+      {
+        "id": "notify",
+        "kind": "telegram",
+        "title": "Withdraw Notice",
+        "group": "Compensate",
+        "with": {
+          "operation": "sendMessage",
+          "chatId": "={{ $env.MOS_REVIEW_CHAT_ID }}",
+          "text": "=Approval {{ $json.payload.approval_id }} withdrawn — the run was cancelled upstream. No action needed."
+        },
+        "onError": "continue"
+      }
+    ]
+  }
+}

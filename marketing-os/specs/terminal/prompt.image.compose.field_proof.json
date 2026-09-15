@@ -1,0 +1,19 @@
+{
+  "extends": "prompt.image.compose",
+  "capability": {
+    "id": "prompt.image.compose.field_proof",
+    "version": "1.0.0",
+    "title": "Compose Image Prompts — Field & Proof of Work",
+    "summary": "Bound by local services and industrial. There is no product shot: the proof is the work, the site and the person who did it. Polish actively reduces credibility here.",
+    "capability_tags": ["produce.image.prompt"],
+    "verticals": ["local_services", "b2b_industrial"],
+    "side_effects": "none",
+    "idempotent": true
+  },
+  "overrides": {
+    "compose": {
+      "system_append": "\n\nFIELD DISCIPLINE\n- Real working environment with its real mess. A spotless site reads as staged and loses the trust the image was meant to buy.\n- Correct, complete PPE on every person in frame, appropriate to the environment shown. Never depict an unsafe practice, even in the background.\n- Available light, phone-camera plausible. Studio lighting is wrong for this category.\n- Before/after pairs share framing, lens and distance so the change is the only variable.\n- Show the work, not a portrait of someone near the work.",
+      "extra_prompt_fields": { "site_type": { "type": "string" }, "pair_role": { "type": "string", "enum": ["before", "after", "single", "in_progress"] }, "ppe_required": { "type": "array", "items": { "type": "string" } } }
+    }
+  }
+}

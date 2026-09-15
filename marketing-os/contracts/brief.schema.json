@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fabai.dev/mos/contracts/brief.schema.json",
+  "title": "Canonical Marketing Brief",
+  "description": "The vertical-agnostic intermediate representation of intent. Everything upstream (a Telegram voice note, a Notion row, a CRM webhook, a calendar slot) compiles DOWN to a Brief. Everything downstream (copy, imagery, motion, distribution) compiles UP from one. Adding a vertical never adds a field here — it only changes how the fields are filled.",
+  "type": "object",
+  "required": ["brief_id", "tenant_id", "vertical", "objective", "offer", "audience", "message", "channels"],
+  "properties": {
+    "brief_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "brand_id": { "type": ["string", "null"] },
+    "vertical": { "type": "string" },
+    "source": {
+      "type": "object",
+      "description": "Where this brief came from, so a human can trace a published post back to the sentence that caused it.",
+      "properties": {
+        "channel": { "type": "string", "examples": ["telegram", "slack", "email", "api", "schedule", "crm_event", "web_form"] },
+        "raw_ref": { "type": "string" },
+        "author": { "type": ["string", "null"] },
+        "received_at": { "type": "string", "format": "date-time" }
+      }
+    },
+
+    "objective": {
+      "type": "string",
+      "enum": ["awareness", "demand_gen", "conversion", "retention", "reactivation", "launch", "brand", "recruiting", "community", "support_deflection"],
+      "description": "Objective, not tactic. The planner maps objective + vertical -> plays."
+    },
+    "funnel_stage": { "type": "string", "enum": ["unaware", "problem_aware", "solution_aware", "product_aware", "most_aware"], "default": "problem_aware" },
+
+    "offer": {
+      "type": "object",
+      "description": "Deliberately abstract. A SaaS trial, a sofa, an HVAC tune-up and a 40-hour consulting retainer are all `offer`.",
+      "required": ["type", "name"],
+      "properties": {
+        "type": { "type": "string", "enum": ["product_physical", "product_digital", "subscription", "service", "marketplace_listing", "event", "content", "lead_magnet", "bundle", "membership"] },
+        "name": { "type": "string" },
+        "sku_or_id": { "type": ["string", "null"] },
+        "value_prop": { "type": "string" },
+        "price": { "type": ["object", "null"], "properties": { "model": { "type": "string", "enum": ["one_time", "recurring", "usage", "quote", "free", "tiered"] }, "amount_minor_units": { "type": ["integer", "null"] }, "currency": { "type": "string" } } },
+        "proof": { "type": "array", "items": { "type": "object", "properties": { "kind": { "type": "string", "enum": ["testimonial", "case_study", "stat", "certification", "award", "review_score", "before_after", "demo", "warranty", "roster", "press"] }, "value": { "type": "string" }, "source_url": { "type": ["string", "null"] }, "verified": { "type": "boolean", "default": false } } } },
+        "fulfilment": { "type": ["object", "null"], "properties": { "mode": { "type": "string", "enum": ["ship", "instant", "appointment", "onsite", "digital_delivery", "pickup"] }, "geo_scope": { "type": "string", "enum": ["global", "national", "regional", "local", "radius"] }, "radius_km": { "type": ["number", "null"] } } }
+      }
+    },
+
+    "audience": {
+      "type": "object",
+      "properties": {
+        "segment_id": { "type": ["string", "null"] },
+        "description": { "type": "string" },
+        "buyer_type": { "type": "string", "enum": ["b2c_individual", "b2c_household", "b2b_smb", "b2b_midmarket", "b2b_enterprise", "b2b2c", "public_sector"] },
+        "roles": { "type": "array", "items": { "type": "string" }, "description": "Empty for most B2C. Populated for committee sales." },
+        "pains": { "type": "array", "items": { "type": "string" } },
+        "objections": { "type": "array", "items": { "type": "string" } },
+        "jobs_to_be_done": { "type": "array", "items": { "type": "string" } },
+        "exclusions": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "message": {
+      "type": "object",
+      "properties": {
+        "angle": { "type": "string", "description": "The single controlling idea. One per brief — a brief with two angles is two briefs." },
+        "hooks": { "type": "array", "items": { "type": "string" } },
+        "key_claims": { "type": "array", "items": { "type": "object", "properties": { "text": { "type": "string" }, "substantiation": { "type": ["string", "null"] }, "risk": { "type": "string", "enum": ["none", "puffery", "comparative", "performance", "regulated"], "default": "none" } } } },
+        "differentiators": { "type": "array", "items": { "type": "string" } },
+        "must_include": { "type": "array", "items": { "type": "string" } },
+        "must_avoid": { "type": "array", "items": { "type": "string" } },
+        "cta": { "type": "object", "properties": { "label": { "type": "string" }, "url": { "type": ["string", "null"] }, "commitment_level": { "type": "string", "enum": ["low", "medium", "high"] } } }
+      }
+    },
+
+    "channels": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["channel", "format"],
+        "properties": {
+          "channel": { "type": "string" },
+          "format": { "type": "string" },
+          "variants": { "type": "integer", "minimum": 1, "default": 1, "description": "How many distinct creative variants to produce for this slot." },
+          "priority": { "type": "integer", "minimum": 1, "maximum": 5, "default": 3 },
+          "aspect_ratio": { "type": ["string", "null"] },
+          "duration_s": { "type": ["number", "null"] }
+        }
+      }
+    },
+
+    "constraints": {
+      "type": "object",
+      "properties": {
+        "tone": { "type": "array", "items": { "type": "string" } },
+        "reading_level": { "type": ["integer", "null"], "description": "US grade level target." },
+        "locales": { "type": "array", "items": { "type": "string" }, "default": ["en-US"] },
+        "brand_rules_ref": { "type": ["string", "null"] },
+        "compliance_profile": { "type": "string", "default": "standard" },
+        "banned_terms": { "type": "array", "items": { "type": "string" } },
+        "max_length": { "type": ["object", "null"], "additionalProperties": { "type": "integer" } }
+      }
+    },
+
+    "assets": {
+      "type": "object",
+      "properties": {
+        "source_preference": { "type": "string", "enum": ["reuse_first", "generate_first", "reuse_only", "generate_only", "supplied_only"], "default": "reuse_first", "description": "`reuse_first` hits the DAM before spending a generation credit — the single biggest cost lever in the system." },
+        "supplied": { "type": "array", "items": { "type": "string" }, "description": "Asset ids or URIs the human already provided." },
+        "required_kinds": { "type": "array", "items": { "type": "string", "enum": ["image", "video", "audio", "copy", "doc", "carousel"] } }
+      }
+    },
+
+    "kpis": { "type": "array", "items": { "type": "object", "properties": { "metric": { "type": "string" }, "target": { "type": ["number", "null"] }, "window_days": { "type": "integer", "default": 14 } } } },
+
+    "schedule": {
+      "type": "object",
+      "properties": {
+        "start_at": { "type": ["string", "null"], "format": "date-time" },
+        "end_at": { "type": ["string", "null"], "format": "date-time" },
+        "cadence": { "type": ["string", "null"], "examples": ["once", "daily", "3x_week", "weekly"] },
+        "timezone": { "type": "string", "default": "UTC" }
+      }
+    },
+
+    "budget_minor_units": { "type": ["integer", "null"] },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1, "description": "Intake's confidence that it understood the request. Below the policy floor the system asks a clarifying question instead of guessing." },
+    "open_questions": { "type": "array", "items": { "type": "string" }, "description": "What intake could not resolve. Non-empty + low confidence => clarification loop, not a guess." }
+  }
+}

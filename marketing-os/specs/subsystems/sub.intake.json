@@ -1,0 +1,62 @@
+{
+  "capability": {
+    "id": "sub.intake",
+    "version": "1.0.0",
+    "layer": "subsystem",
+    "title": "Intake & Understanding",
+    "summary": "Turns anything a human or a system sends into a validated Brief. Owns modality handling, PII redaction, intent classification and the clarification loop. Everything after this point in the estate reads a Brief and never a raw message.",
+    "owner": "intake",
+    "maturity": "ga",
+    "capability_tags": ["subsystem.intake"],
+    "output_schema": "contracts/brief.schema.json",
+    "side_effects": "external_write",
+    "idempotent": true,
+    "sla": { "p50_ms": 9000, "p95_ms": 30000, "timeout_ms": 120000 },
+    "requires": { "capabilities": ["intake.message.normalize", "intake.audio.transcribe", "understand.intent.classify", "plan.brief.synthesize", "intake.clarification.request"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 6 },
+    "observability": { "slo": "98% of inbound messages reach a Brief or a clarification within 60s" }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "normalize", "kind": "call", "title": "Normalise Message", "group": "Intake",
+        "with": { "capability": "intake.message.normalize" } },
+      { "id": "modality", "kind": "if", "title": "Needs Transcription?", "group": "Intake",
+        "with": { "condition": "={{ $json.needs_transcription === true }}" },
+        "next": { "true": "transcribe", "false": "classify" } },
+      { "id": "transcribe", "kind": "call", "title": "Transcribe Voice", "group": "Intake",
+        "with": { "capability": "intake.audio.transcribe", "payload": { "audio_url": "={{ $json.media[0].url }}" } },
+        "next": "classify" },
+      { "id": "classify", "kind": "llm", "title": "Classify Intent", "group": "Understand",
+        "with": { "role": "classify.intent",
+          "system": "Classify an inbound marketing request. You are a router, not a strategist — you decide what KIND of thing this is so the right subsystem picks it up. You never decide what the campaign should say.",
+          "prompt": "MESSAGE:\n{{ $json.text }}\n\nSOURCE: {{ $json.source.channel }}",
+          "structured": { "type": "object", "required": ["intent", "scope"], "properties": {
+            "intent": { "type": "string", "enum": ["content.single", "campaign.launch", "asset.repurpose", "question", "edit_request", "approval_response", "status_check", "out_of_scope"] },
+            "scope": { "type": "string", "enum": ["one_asset", "one_channel", "multi_channel", "full_campaign", "none"] },
+            "urgency": { "type": "string", "enum": ["now", "scheduled", "whenever"] },
+            "references_prior_run": { "type": "boolean" },
+            "confidence": { "type": "number" }
+          } } } },
+      { "id": "route_intent", "kind": "switch", "title": "Route by Intent", "group": "Understand",
+        "with": { "value": "={{ ($json.output || $json).intent }}", "cases": ["content.single", "campaign.launch", "asset.repurpose", "question", "edit_request", "approval_response", "status_check", "out_of_scope"], "fallback": "content.single" },
+        "next": { "content.single": "brief", "campaign.launch": "brief", "asset.repurpose": "brief", "question": "answer", "edit_request": "brief", "approval_response": "forward_approval", "status_check": "status", "out_of_scope": "decline" } },
+      { "id": "brief", "kind": "call", "title": "Synthesise Brief", "group": "Brief",
+        "with": { "capability": "plan.brief.synthesize" } },
+      { "id": "brief_gate", "kind": "if", "title": "Brief Usable?", "group": "Brief",
+        "with": { "condition": "={{ $json.confidence >= 0.55 && $json._validation?.ok }}" },
+        "next": { "true": null, "false": "clarify" } },
+      { "id": "clarify", "next": null, "kind": "call", "title": "Ask a Question", "group": "Brief",
+        "with": { "capability": "intake.clarification.request" } },
+      { "id": "answer", "next": null, "kind": "set", "title": "Route to Q&A", "group": "Understand",
+        "with": { "assignments": { "handoff": "sys.assistant.answer", "note": "A question is not a campaign. Handing it to an answering path keeps the production pipeline from manufacturing content nobody asked for." } } },
+      { "id": "forward_approval", "next": null, "kind": "set", "title": "Forward to Approval", "group": "Understand",
+        "with": { "assignments": { "handoff": "approve.human.resolve" } } },
+      { "id": "status", "next": null, "kind": "http", "title": "Run Status", "group": "Understand",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/runs/recent?tenant_id={{ $('Envelope In').first().json.tenant_id }}&limit=5", "auth": "headerAuth" } },
+      { "id": "decline", "kind": "set", "title": "Out of Scope", "group": "Understand",
+        "with": { "assignments": { "handoff": "none", "reply": "That's outside what I handle. I work on marketing content and campaigns." } } }
+    ]
+  }
+}

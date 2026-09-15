@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fabai.dev/mos/contracts/vertical-profile.schema.json",
+  "title": "Vertical Profile",
+  "description": "The whole answer to 'does this work for SaaS AND sofas AND plumbers'. A profile is DATA, not code. It (a) supplies defaults every generic workflow reads, (b) may BIND an abstract capability to a specialised implementation, and (c) declares the plays the planner is allowed to choose from. Adding a vertical is adding one of these files — no workflow is edited.",
+  "type": "object",
+  "required": ["id", "title", "taxonomy"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+    "title": { "type": "string" },
+    "extends": { "type": ["string", "null"], "default": "generic", "description": "Single inheritance. Deep-merged at load: object keys merge, arrays replace unless the key ends in `_add`." },
+    "description": { "type": "string" },
+
+    "taxonomy": {
+      "type": "object",
+      "properties": {
+        "offer_types": { "type": "array", "items": { "type": "string" } },
+        "buyer_type_default": { "type": "string" },
+        "buying_cycle_days": { "type": "integer", "description": "Drives nurture cadence and how long attribution windows stay open." },
+        "decision_makers": { "type": "array", "items": { "type": "string" } },
+        "purchase_triggers": { "type": "array", "items": { "type": "string" } },
+        "geo_scope_default": { "type": "string", "enum": ["global", "national", "regional", "local", "radius"] },
+        "seasonality": { "type": "array", "items": { "type": "object", "properties": { "window": { "type": "string" }, "modifier": { "type": "number" }, "note": { "type": "string" } } } }
+      }
+    },
+
+    "message": {
+      "type": "object",
+      "properties": {
+        "proof_types": { "type": "array", "items": { "type": "string" }, "description": "Ranked. A plumber leads with reviews and licensing; a SaaS leads with logos and ROI; a furniture brand leads with photography and returns policy." },
+        "objection_library": { "type": "array", "items": { "type": "string" } },
+        "angle_library": { "type": "array", "items": { "type": "string" } },
+        "cta_ladder": { "type": "array", "items": { "type": "object", "properties": { "stage": { "type": "string" }, "label": { "type": "string" }, "commitment_level": { "type": "string" } } } },
+        "lexicon": { "type": "object", "properties": { "prefer": { "type": "array", "items": { "type": "string" } }, "avoid": { "type": "array", "items": { "type": "string" } }, "banned": { "type": "array", "items": { "type": "string" } } } },
+        "tone_default": { "type": "array", "items": { "type": "string" } },
+        "reading_level": { "type": "integer" }
+      }
+    },
+
+    "channels": {
+      "type": "object",
+      "properties": {
+        "weights": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }, "description": "Planner's prior for channel mix. Overwritten by measured performance once there is enough signal." },
+        "formats": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } } },
+        "excluded": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "creative": {
+      "type": "object",
+      "properties": {
+        "image_style": { "type": "string" },
+        "image_negative": { "type": "string" },
+        "video_style": { "type": "string" },
+        "shot_grammar": { "type": "array", "items": { "type": "string" }, "description": "Ordered beats for a short-form video in this vertical. This is the difference between a product-demo cut and a before/after cut." },
+        "aspect_ratios": { "type": "array", "items": { "type": "string" } },
+        "default_duration_s": { "type": "number" },
+        "voice": { "type": "object", "properties": { "gender": { "type": "string" }, "pace": { "type": "string" }, "style": { "type": "string" } } },
+        "asset_reuse_bias": { "type": "number", "minimum": 0, "maximum": 1, "description": "0 = always generate fresh, 1 = never generate if anything close exists in the DAM." }
+      }
+    },
+
+    "compliance": {
+      "type": "object",
+      "properties": {
+        "profile": { "type": "string", "default": "standard" },
+        "regulated_claims": { "type": "array", "items": { "type": "string" } },
+        "required_disclaimers": { "type": "array", "items": { "type": "object", "properties": { "when": { "type": "string" }, "text": { "type": "string" }, "placement": { "type": "string" } } } },
+        "review_mode": { "type": "string", "enum": ["none", "sampled", "always"], "default": "sampled" },
+        "autonomy_ceiling": { "type": "string", "enum": ["suggest", "draft", "publish_with_approval", "publish_autonomous"], "description": "A vertical may LOWER the tenant's autonomy but never raise it." }
+      }
+    },
+
+    "kpis": { "type": "array", "items": { "type": "object", "properties": { "metric": { "type": "string" }, "primary": { "type": "boolean" }, "benchmark": { "type": ["number", "null"] } } } },
+
+    "capability_bindings": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "abstract capability tag -> concrete capability id. This is mechanism (b): route to a DIFFERENT workflow by vertical, decided automatically, with no branching inside the generic workflows."
+    },
+
+    "plays": {
+      "type": "array",
+      "description": "Named, reusable campaign shapes the planner may select. A play is a DAG of capability tags plus the conditions under which it is a good idea.",
+      "items": {
+        "type": "object",
+        "required": ["id", "objective", "steps"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "objective": { "type": "string" },
+          "when": { "type": "string", "description": "Human-readable selection condition, also fed to the decision engine." },
+          "steps": { "type": "array", "items": { "type": "object", "properties": { "tag": { "type": "string" }, "with": { "type": "object" }, "parallel_group": { "type": ["string", "null"] } } } },
+          "expected_kpi": { "type": ["string", "null"] }
+        }
+      }
+    },
+
+    "prompt_fragments": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Mechanism (a): named strings injected into the generic agents' system prompts. One workflow, many behaviours."
+    }
+  }
+}

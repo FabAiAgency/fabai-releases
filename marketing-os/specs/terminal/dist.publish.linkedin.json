@@ -1,0 +1,58 @@
+{
+  "capability": {
+    "id": "dist.publish.linkedin",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Publish to LinkedIn",
+    "summary": "Channel adapter with asset registration, first-comment support and scheduling. Compensable: a post can be deleted, so this one declares a compensation capability and the orchestrator can roll it back if a sibling step fails hard.",
+    "owner": "distribution",
+    "maturity": "ga",
+    "capability_tags": ["distribute.publish"],
+    "input_schema": "contracts/publish-request.schema.json",
+    "side_effects": "publish",
+    "idempotent": true,
+    "compensation": "dist.unpublish.linkedin",
+    "providers": [{ "name": "linkedin", "tier": "nano", "cost_per_unit_minor": 0, "unit": "call" }],
+    "sla": { "p50_ms": 1500, "p95_ms": 6000, "timeout_ms": 45000 },
+    "retry": { "max_attempts": 3, "backoff": "exponential", "base_ms": 3000, "retry_on": ["RATE_LIMITED", "TIMEOUT"] },
+    "circuit_breaker": { "failure_threshold": 3, "window_s": 600, "cooldown_s": 900 },
+    "requires": { "secrets": ["LINKEDIN_OAUTH"], "scopes": ["w_member_social", "w_organization_social"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 },
+    "observability": { "emits": ["published"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "gates", "kind": "guard", "title": "Re-verify Gates", "group": "Publish", "with": { "checks": ["compliance", "brand", "rights", "approval"] } },
+      { "id": "limits", "kind": "code", "title": "Enforce Channel Limits", "group": "Publish",
+        "with": { "code": "// Truncating at the boundary rather than trusting upstream. Every adapter owns its own\n// platform limits so a factory never has to know them.\nconst CH = JSON.parse($env.MOS_CHANNELS || '{}').linkedin || {};\nconst c = $json.payload.content || {};\nconst fmt = CH.formats?.[$json.payload.format] || CH.formats?.post || {};\nlet body = c.body || '';\nconst tags = (c.hashtags || []).slice(0, fmt.hashtags_max ?? 5);\nlet warn = null;\nif (fmt.max_chars && body.length > fmt.max_chars) { body = body.slice(0, fmt.max_chars - 1); warn = 'truncated_to_channel_limit'; }\nreturn [{ json: { body, hashtags: tags, warn, asset_urls: c.asset_urls || [], alt_text: c.alt_text || null, link: c.link || null, first_comment: c.first_comment || null } }];" } },
+      { "id": "register_asset", "kind": "http", "title": "Register Media", "group": "Publish",
+        "with": { "method": "POST", "url": "https://api.linkedin.com/rest/images?action=initializeUpload", "auth": "oAuth2Api",
+          "body": { "initializeUploadRequest": { "owner": "={{ $('Envelope In').first().json.payload.account_ref }}" } } },
+        "onError": "continue" },
+      { "id": "upload_asset", "kind": "http", "title": "Upload Media", "group": "Publish",
+        "with": { "method": "PUT", "url": "={{ $json.value?.uploadUrl }}", "response": "file" },
+        "onError": "continue" },
+      { "id": "post", "kind": "http", "title": "Create Post", "group": "Publish",
+        "with": { "method": "POST", "url": "https://api.linkedin.com/rest/posts", "auth": "oAuth2Api",
+          "headers": { "X-Restli-Protocol-Version": "2.0.0", "LinkedIn-Version": "202409" },
+          "body": {
+            "author": "={{ $('Envelope In').first().json.payload.account_ref }}",
+            "commentary": "={{ $('Enforce Channel Limits').first().json.body }}",
+            "visibility": "PUBLIC",
+            "distribution": { "feedDistribution": "MAIN_FEED" },
+            "content": "={{ $('Register Media').first().json.value?.image ? { media: { id: $('Register Media').first().json.value.image, altText: $('Enforce Channel Limits').first().json.alt_text } } : undefined }}",
+            "lifecycleState": "PUBLISHED"
+          } } },
+      { "id": "first_comment", "kind": "http", "title": "First Comment", "group": "Publish",
+        "with": { "method": "POST", "url": "https://api.linkedin.com/rest/socialActions/{{ $json.id }}/comments", "auth": "oAuth2Api",
+          "body": { "actor": "={{ $('Envelope In').first().json.payload.account_ref }}", "message": { "text": "={{ $('Enforce Channel Limits').first().json.first_comment }}" } },
+          "note": "Links live in the first comment rather than the post body: LinkedIn suppresses reach on posts with outbound links. A channel-specific tactic that belongs in the adapter, not in the copywriter's prompt." },
+        "onError": "continue" },
+      { "id": "record", "kind": "http", "title": "Record Publication", "group": "Publish",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/publish", "auth": "headerAuth",
+          "body": { "idempotency_key": "={{ $('Envelope In').first().json.payload.idempotency_key }}", "channel": "linkedin", "external_id": "={{ $('Create Post').first().json.id }}", "published_at": "={{ $now.toISO() }}", "trace_id": "={{ $('Envelope In').first().json.trace_id }}" } } }
+    ]
+  }
+}

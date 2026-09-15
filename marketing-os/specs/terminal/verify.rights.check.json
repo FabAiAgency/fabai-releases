@@ -1,0 +1,28 @@
+{
+  "capability": {
+    "id": "verify.rights.check",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Rights & Licensing Check",
+    "summary": "Verifies every asset bound for distribution has a known, unexpired licence covering the intended usage scope. Purely deterministic — no model judges a licence.",
+    "owner": "governance",
+    "maturity": "ga",
+    "capability_tags": ["verify.rights"],
+    "side_effects": "none",
+    "idempotent": true,
+    "sla": { "p50_ms": 250, "p95_ms": 1000, "timeout_ms": 15000 },
+    "requires": { "secrets": ["MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "load", "kind": "http", "title": "Load Asset Rights", "group": "Governance",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/dam/rights", "auth": "headerAuth",
+          "body": { "tenant_id": "={{ $json.tenant_id }}", "asset_ids": "={{ $json.payload.asset_ids }}" } } },
+      { "id": "check", "kind": "code", "title": "Check Rights", "group": "Governance",
+        "with": { "code": "const env = $('Envelope In').first().json;\nconst scope = env.payload.usage_scope || 'organic_social';\nconst now = Date.now();\nconst failures = [];\n\nfor (const a of ($json.assets || [])) {\n  const r = a.rights || {};\n  if (!r.license || r.license === 'unknown') { failures.push({ asset_id: a.asset_id, reason: 'license_unknown' }); continue; }\n  if (r.expires_at && Date.parse(r.expires_at) < now) { failures.push({ asset_id: a.asset_id, reason: 'license_expired', expired_at: r.expires_at }); continue; }\n  if (Array.isArray(r.usage_scope) && r.usage_scope.length && !r.usage_scope.includes(scope)) { failures.push({ asset_id: a.asset_id, reason: 'scope_not_covered', needed: scope, covered: r.usage_scope }); continue; }\n  if (a.depicts_person && !r.talent_release) { failures.push({ asset_id: a.asset_id, reason: 'talent_release_missing' }); }\n}\n\nreturn [{ json: {\n  status: failures.length ? 'fail' : 'pass',\n  failures,\n  checked: ($json.assets || []).length,\n  may_proceed: failures.length === 0\n} }];" } }
+    ]
+  }
+}

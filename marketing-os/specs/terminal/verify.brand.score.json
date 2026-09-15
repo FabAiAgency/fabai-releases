@@ -1,0 +1,37 @@
+{
+  "capability": {
+    "id": "verify.brand.score",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Brand Consistency Score",
+    "summary": "Scores copy and imagery against the tenant's brand config before anything is rendered or posted. Catching a wrong palette here costs a cent; catching it after a render costs the render, and after a post costs the brand.",
+    "owner": "governance",
+    "maturity": "beta",
+    "capability_tags": ["verify.brand"],
+    "side_effects": "none",
+    "idempotent": true,
+    "providers": [{ "name": "anthropic", "model": "claude-haiku-4-5-20251001", "tier": "small", "cost_per_unit_minor": 1, "unit": "call" }],
+    "sla": { "p50_ms": 2500, "p95_ms": 9000, "timeout_ms": 45000 },
+    "requires": { "secrets": ["ANTHROPIC_API_KEY", "MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 1, "variable_by": ["variants"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "brand", "kind": "http", "title": "Load Brand Config", "group": "Governance",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/tenants/{{ $json.tenant_id }}/brands/{{ $json.brand_id || 'default' }}", "auth": "headerAuth" } },
+      { "id": "score", "kind": "llm", "title": "Brand Critic", "group": "Governance",
+        "with": { "role": "vision.critic",
+          "system": "You score creative against a brand definition. Be specific and mechanical: name the rule, name what violated it.\n\nSCORE EACH 0-1: voice_match, visual_match, claim_alignment, audience_fit.\nOverall is the MINIMUM of the four, not the mean — a piece that is perfect except for an off-brand palette is still off-brand, and averaging hides exactly the failure a reviewer needs to see.\n\nBRAND:\n{{ JSON.stringify($json) }}",
+          "prompt": "COPY:\n{{ JSON.stringify($('Envelope In').first().json.payload.copy) }}\n\nIMAGE DESCRIPTIONS:\n{{ JSON.stringify($('Envelope In').first().json.payload.image_alt_texts || []) }}",
+          "structured": { "type": "object", "required": ["overall", "scores"], "properties": {
+            "overall": { "type": "number" },
+            "scores": { "type": "object", "properties": { "voice_match": { "type": "number" }, "visual_match": { "type": "number" }, "claim_alignment": { "type": "number" }, "audience_fit": { "type": "number" } } },
+            "violations": { "type": "array", "items": { "type": "object", "properties": { "rule": { "type": "string" }, "evidence": { "type": "string" }, "fix": { "type": "string" } } } }
+          } } } },
+      { "id": "threshold", "kind": "code", "title": "Apply Threshold", "group": "Governance",
+        "with": { "code": "const out = $json.output || $json;\nconst brand = $('Load Brand Config').first().json || {};\nconst floor = brand.quality_floor ?? 0.7;\nconst status = out.overall >= floor ? 'pass' : (out.overall >= floor - 0.15 ? 'warn' : 'fail');\nreturn [{ json: { status, score: out.overall, scores: out.scores, violations: out.violations || [], floor, may_proceed: status !== 'fail' } }];" } }
+    ]
+  }
+}

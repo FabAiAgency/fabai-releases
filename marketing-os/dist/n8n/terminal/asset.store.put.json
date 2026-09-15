@@ -1,0 +1,669 @@
+{
+  "name": "[terminal] Store Asset Durably",
+  "nodes": [
+    {
+      "id": "n_0022",
+      "name": "Frame · Envelope In",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        490,
+        170
+      ],
+      "parameters": {
+        "content": "## Envelope In",
+        "height": 330,
+        "width": 700,
+        "color": 5
+      }
+    },
+    {
+      "id": "n_0023",
+      "name": "Frame · Persist",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1170,
+        170
+      ],
+      "parameters": {
+        "content": "## Persist",
+        "height": 530,
+        "width": 2060,
+        "color": 6
+      }
+    },
+    {
+      "id": "n_0024",
+      "name": "Frame · Index",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        890
+      ],
+      "parameters": {
+        "content": "## Index",
+        "height": 330,
+        "width": 700,
+        "color": 7
+      }
+    },
+    {
+      "id": "n_0025",
+      "name": "Frame · Telemetry Out##0",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2870,
+        370
+      ],
+      "parameters": {
+        "content": "## Telemetry Out",
+        "height": 330,
+        "width": 360,
+        "color": 2
+      }
+    },
+    {
+      "id": "n_0026",
+      "name": "Frame · Telemetry Out##1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        1090
+      ],
+      "parameters": {
+        "content": "## Telemetry Out",
+        "height": 330,
+        "width": 360,
+        "color": 1
+      }
+    },
+    {
+      "id": "n_0027",
+      "name": "Frame · Error & DLQ",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        1530
+      ],
+      "parameters": {
+        "content": "## Error & DLQ",
+        "height": 330,
+        "width": 1040,
+        "color": 3
+      }
+    },
+    {
+      "id": "n_0014",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "n_0015",
+      "name": "Envelope In",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED preamble — every unit in the estate starts here, identically.\n// Rejects an envelope whose MAJOR version this unit does not implement, rather than\n// half-processing a shape it does not understand.\nconst SUPPORTED_MAJOR = 1;\nconst raw = $json.envelope ?? $json;\nconst v = String(raw.envelope_version ?? '0.0.0');\nif (Number(v.split('.')[0]) !== SUPPORTED_MAJOR) {\n  throw new Error('VALIDATION_FAILED: envelope_version ' + v + ' is not supported by asset.store.put@1.0.0 (needs ' + SUPPORTED_MAJOR + '.x)');\n}\nfor (const f of ['trace_id', 'tenant_id', 'idempotency_key']) {\n  if (!raw[f]) throw new Error('VALIDATION_FAILED: envelope.' + f + ' is required');\n}\nif (raw.deadline_at && Date.parse(raw.deadline_at) < Date.now()) {\n  // Fail fast rather than start work that cannot finish in time.\n  throw new Error('TIMEOUT: deadline_at ' + raw.deadline_at + ' already passed before asset.store.put started');\n}\nreturn [{ json: {\n  ...raw,\n  span_id: 'spn_' + Math.random().toString(36).slice(2, 10),\n  parent_span_id: raw.span_id ?? null,\n  policy: raw.policy ?? {},\n  budget: raw.budget ?? {},\n  provenance: raw.provenance ?? [],\n  _started_at: Date.now(),\n  _capability: \"asset.store.put\",\n  _capability_version: \"1.0.0\"\n} }];"
+      }
+    },
+    {
+      "id": "n_0016",
+      "name": "Span Start",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED telemetry — span_start.\nconst e = $json;\nreturn [{ json: { ...e, _telemetry: {\n  event_id: 'evt_' + Math.random().toString(36).slice(2, 12),\n  trace_id: e.trace_id, span_id: e.span_id, parent_span_id: e.parent_span_id,\n  tenant_id: e.tenant_id, brand_id: e.brand_id ?? null, vertical: e.vertical ?? null,\n  capability: \"asset.store.put\", capability_version: \"1.0.0\",\n  layer: \"terminal\", stage: e.stage ?? null,\n  event: 'span_start', at: new Date().toISOString()\n} } }];"
+      }
+    },
+    {
+      "id": "n_0001",
+      "name": "Fetch If URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1260,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.payload.source_url }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0002",
+      "name": "Checksum & Dedupe Key",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst bin = $binary?.data;\nconst buf = bin ? Buffer.from(bin.data, 'base64') : Buffer.from(JSON.stringify($json.payload || {}));\nconst sum = crypto.createHash('sha256').update(buf).digest('hex');\nreturn [{ json: { checksum_sha256: sum, bytes: buf.length, mime: bin?.mimeType || 'application/octet-stream' } }];"
+      }
+    },
+    {
+      "id": "n_0003",
+      "name": "Already Stored?",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1940,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.MOS_STATE_URL }}/dam/by-checksum/{{ $json.checksum_sha256 }}?tenant_id={{ $('Envelope In').first().json.tenant_id }}",
+        "options": {
+          "timeout": 60000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0005",
+      "name": "Dedupe Hit?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2280,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c_0004",
+              "leftValue": "={{ !!$json.asset_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "n_0009",
+      "name": "Return Existing",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2620,
+        300
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a_0006",
+              "name": "asset_id",
+              "value": "={{ $json.asset_id }}",
+              "type": "string"
+            },
+            {
+              "id": "a_0007",
+              "name": "deduped",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "a_0008",
+              "name": "note",
+              "value": "Identical bytes already in the library — no upload, no new row, no double count in the cost ledger.",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n_0010",
+      "name": "Upload",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2620,
+        500
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "upload",
+        "name": "={{ $('Envelope In').first().json.payload.kind }}_{{ $('Envelope In').first().json.trace_id }}_{{ $runIndex }}",
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $env.MOS_DRIVE_FOLDER }}/{{ $('Envelope In').first().json.tenant_id }}/{{ $now.toFormat('yyyy-MM') }}",
+          "mode": "url"
+        }
+      }
+    },
+    {
+      "id": "n_0011",
+      "name": "Make Readable",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2960,
+        300
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "share",
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "anyone"
+          }
+        }
+      }
+    },
+    {
+      "id": "n_0012",
+      "name": "Embed for Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        1020
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "options": {
+          "timeout": 60000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"model\": \"text-embedding-3-large\",\n  \"input\": \"={{ [$('Envelope In').first().json.payload.prompt, ($('Envelope In').first().json.payload.tags || []).join(' '), $('Envelope In').first().json.payload.role].filter(Boolean).join(' | ') }}\"\n}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0013",
+      "name": "Register in DAM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        580,
+        1020
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_STATE_URL }}/dam/assets",
+        "options": {
+          "timeout": 60000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"tenant_id\": \"={{ $('Envelope In').first().json.tenant_id }}\",\n  \"brand_id\": \"={{ $('Envelope In').first().json.brand_id }}\",\n  \"trace_id\": \"={{ $('Envelope In').first().json.trace_id }}\",\n  \"kind\": \"={{ $('Envelope In').first().json.payload.kind }}\",\n  \"role\": \"={{ $('Envelope In').first().json.payload.role || 'raw' }}\",\n  \"storage\": {\n    \"provider\": \"gdrive\",\n    \"uri\": \"={{ $('Upload').first().json.id }}\",\n    \"public_url\": \"={{ $('Make Readable').first().json.webViewLink }}\"\n  },\n  \"media\": {\n    \"checksum_sha256\": \"={{ $('Checksum & Dedupe Key').first().json.checksum_sha256 }}\",\n    \"bytes\": \"={{ $('Checksum & Dedupe Key').first().json.bytes }}\",\n    \"mime\": \"={{ $('Checksum & Dedupe Key').first().json.mime }}\"\n  },\n  \"generation\": {\n    \"prompt\": \"={{ $('Envelope In').first().json.payload.prompt }}\",\n    \"provider\": \"={{ $('Envelope In').first().json.payload.provider }}\"\n  },\n  \"rights\": {\n    \"license\": \"={{ $('Envelope In').first().json.payload.rights_license || 'generated' }}\"\n  },\n  \"taxonomy\": {\n    \"vertical\": \"={{ $('Envelope In').first().json.vertical }}\",\n    \"tags\": \"={{ $('Envelope In').first().json.payload.tags || [] }}\",\n    \"embedding\": \"={{ $('Embed for Search').first().json.data?.[0]?.embedding }}\"\n  },\n  \"derived_from\": \"={{ $('Envelope In').first().json.payload.derived_from || [] }}\"\n}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "n_0017",
+      "name": "Provenance & Span End",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2960,
+        500
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED epilogue — appends exactly one provenance entry and closes the span.\n// Provenance is append-only; nothing in the estate is permitted to rewrite an earlier entry.\nconst e = $('Envelope In').first().json;\nconst out = $json;\nconst duration = Date.now() - (e._started_at ?? Date.now());\nconst entry = {\n  capability: \"asset.store.put\",\n  version: \"1.0.0\",\n  at: new Date().toISOString(),\n  duration_ms: duration,\n  model: out._model ?? null,\n  provider: out._provider ?? null,\n  cost_minor_units: out._cost_minor_units ?? 0,\n  inputs_hash: e.idempotency_key,\n  decision_id: out.decision?.decision_id ?? null\n};\nreturn [{ json: {\n  ...out,\n  _envelope: {\n    ...e,\n    span_id: e.parent_span_id,\n    provenance: [...(e.provenance ?? []), entry],\n    budget: { ...(e.budget ?? {}), spent_minor_units: (e.budget?.spent_minor_units ?? 0) + (entry.cost_minor_units ?? 0) }\n  },\n  _telemetry: {\n    event_id: 'evt_' + Math.random().toString(36).slice(2, 12),\n    trace_id: e.trace_id, span_id: e.span_id, tenant_id: e.tenant_id,\n    capability: \"asset.store.put\", capability_version: \"1.0.0\",\n    layer: \"terminal\", event: 'span_end', status: out.error ? 'error' : 'ok',\n    duration_ms: duration, cost_minor_units: entry.cost_minor_units,\n    error_code: out.error?.code ?? null, at: new Date().toISOString()\n  }\n} }];"
+      }
+    },
+    {
+      "id": "n_0018",
+      "name": "Emit Telemetry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        1220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_TELEMETRY_URL }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._telemetry) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0019",
+      "name": "On Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        1660
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "n_0020",
+      "name": "Park to DLQ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        580,
+        1660
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_STATE_URL }}/dlq",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  capability: \"asset.store.put\",\n  capability_version: \"1.0.0\",\n  trace_id: $json.execution?.id,\n  error: { message: $json.execution?.error?.message, node: $json.execution?.lastNodeExecuted, stack: $json.execution?.error?.stack },\n  envelope: $json.execution?.data,\n  replayable: true,\n  at: new Date().toISOString()\n}) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0021",
+      "name": "Notify Ops",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        920,
+        1660
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $env.MOS_OPS_CHAT_ID }}",
+        "text": "=Run failed in asset.store.put\n{{ $json.execution?.error?.message }}\nNode: {{ $json.execution?.lastNodeExecuted }}\nReplay: mos replay {{ $json.execution?.id }}",
+        "additionalFields": {}
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Fetch If URL": {
+      "main": [
+        [
+          {
+            "node": "Checksum & Dedupe Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checksum & Dedupe Key": {
+      "main": [
+        [
+          {
+            "node": "Already Stored?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Already Stored?": {
+      "main": [
+        [
+          {
+            "node": "Dedupe Hit?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dedupe Hit?": {
+      "main": [
+        [
+          {
+            "node": "Return Existing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload": {
+      "main": [
+        [
+          {
+            "node": "Make Readable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make Readable": {
+      "main": [
+        [
+          {
+            "node": "Embed for Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embed for Search": {
+      "main": [
+        [
+          {
+            "node": "Register in DAM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Envelope In",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envelope In": {
+      "main": [
+        [
+          {
+            "node": "Span Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Span Start": {
+      "main": [
+        [
+          {
+            "node": "Fetch If URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provenance & Span End": {
+      "main": [
+        [
+          {
+            "node": "Emit Telemetry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Existing": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register in DAM": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Error": {
+      "main": [
+        [
+          {
+            "node": "Park to DLQ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Park to DLQ": {
+      "main": [
+        [
+          {
+            "node": "Notify Ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "errorWorkflow": "",
+    "timezone": "UTC",
+    "executionTimeout": 60
+  },
+  "tags": [
+    {
+      "name": "mos:terminal"
+    },
+    {
+      "name": "mos:ga"
+    },
+    {
+      "name": "tag:asset.store"
+    }
+  ],
+  "meta": {
+    "mos": {
+      "capability_id": "asset.store.put",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "owner": "dam",
+      "side_effects": "external_write",
+      "idempotent": true,
+      "compensation": "asset.store.delete",
+      "verticals": "*",
+      "compiled_at": null,
+      "compiled_from": "specs/terminal/asset.store.put.json",
+      "extends": null,
+      "generated": "Compiled by marketing-os/compiler. Edit the spec, not this file — canvas edits are overwritten on the next build."
+    }
+  },
+  "pinData": {}
+}

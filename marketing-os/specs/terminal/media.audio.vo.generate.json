@@ -1,0 +1,40 @@
+{
+  "capability": {
+    "id": "media.audio.vo.generate",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Generate Voiceover",
+    "summary": "Script to narration, with the voice characteristics taken from the vertical profile rather than hard-coded. Returns a durable audio asset plus per-line timings, which is what makes caption sync and beat alignment possible downstream.",
+    "owner": "motion",
+    "maturity": "ga",
+    "capability_tags": ["produce.audio.vo"],
+    "side_effects": "spend",
+    "idempotent": true,
+    "compensation": "asset.store.delete",
+    "providers": [
+      { "name": "elevenlabs", "model": "eleven_multilingual_v2", "tier": "standard", "cost_per_unit_minor": 2, "unit": "second" },
+      { "name": "openai", "model": "tts-1-hd", "tier": "small", "cost_per_unit_minor": 1, "unit": "second" }
+    ],
+    "sla": { "p50_ms": 5000, "p95_ms": 20000, "timeout_ms": 120000 },
+    "retry": { "max_attempts": 3, "backoff": "exponential", "base_ms": 2000 },
+    "requires": { "secrets": ["ELEVENLABS_API_KEY"], "capabilities": ["asset.store.put"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 20, "variable_by": ["duration_s", "locales"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "voice", "kind": "code", "title": "Resolve Voice", "group": "Generate Audio",
+        "with": { "code": "const p = $json.payload;\nconst v = p.profile?.creative?.voice || {};\nconst MAP = {\n  'calm|measured': 'voice_calm_neutral',\n  'brisk|explanatory': 'voice_clear_explainer',\n  'fast|enthusiastic-but-real': 'voice_energetic_ugc',\n  'conversational|straight-talking': 'voice_plain_local'\n};\nconst key = `${v.pace || 'medium'}|${v.style || 'conversational'}`;\nconst voice_id = p.voice_id || MAP[key] || $env.DEFAULT_VOICE_ID;\nconst lines = (p.beats || []).map(b => b.spoken).filter(Boolean);\nreturn [{ json: { voice_id, text: p.text || lines.join(' '), lines, locale: $('Envelope In').first().json.locale, stability: 0.45, similarity_boost: 0.75 } }];" } },
+      { "id": "tts", "kind": "http", "title": "Synthesise", "group": "Generate Audio",
+        "with": { "method": "POST", "url": "https://api.elevenlabs.io/v1/text-to-speech/{{ $json.voice_id }}/with-timestamps", "auth": "headerAuth",
+          "body": { "text": "={{ $json.text }}", "model_id": "eleven_multilingual_v2", "voice_settings": { "stability": "={{ $json.stability }}", "similarity_boost": "={{ $json.similarity_boost }}" } },
+          "response": "file" } },
+      { "id": "timings", "kind": "code", "title": "Extract Timings", "group": "Generate Audio",
+        "with": { "code": "// Word-level timings are what let captions and beat cuts land on the right frame.\n// Without them the renderer guesses, and the guess is visible.\nconst a = $json.alignment || {};\nconst chars = a.characters || [];\nconst starts = a.character_start_times_seconds || [];\nconst ends = a.character_end_times_seconds || [];\nconst words = [];\nlet cur = '', s = null;\nfor (let i = 0; i < chars.length; i++) {\n  const c = chars[i];\n  if (s === null) s = starts[i];\n  if (/\\s/.test(c)) { if (cur) words.push({ word: cur, start_s: s, end_s: ends[i] }); cur = ''; s = null; }\n  else cur += c;\n}\nif (cur) words.push({ word: cur, start_s: s, end_s: ends[ends.length - 1] });\nreturn [{ json: { words, duration_s: ends[ends.length - 1] || null, word_count: words.length } }];" },
+        "onError": "continue" },
+      { "id": "store", "kind": "call", "title": "Store Durably", "group": "Persist",
+        "with": { "capability": "asset.store.put", "payload": { "kind": "audio", "role": "voiceover" } } }
+    ]
+  }
+}

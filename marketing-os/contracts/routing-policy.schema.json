@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fabai.dev/mos/contracts/routing-policy.schema.json",
+  "title": "Routing Policy",
+  "description": "How an abstract capability tag becomes a concrete implementation. Deterministic layers are consulted first and an LLM is consulted last, only inside an explicitly declared gray zone. That ordering is what makes an autonomous system auditable instead of merely clever.",
+  "type": "object",
+  "required": ["id", "version", "precedence"],
+  "properties": {
+    "id": { "type": "string" },
+    "version": { "type": "string" },
+    "precedence": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["hard_rule", "vertical_binding", "policy_table", "model", "default"] },
+      "description": "Evaluated in order; first layer that returns a binding wins. `hard_rule` can also VETO, which stops evaluation entirely."
+    },
+
+    "hard_rules": {
+      "type": "array",
+      "description": "Non-negotiable. Compliance, safety, budget, rights. An LLM never overrides one and never sees a choice a hard rule already removed.",
+      "items": {
+        "type": "object",
+        "required": ["id", "when", "then"],
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" },
+          "when": { "type": "object", "description": "Conjunction of field matchers over the envelope + brief. See docs/04-routing-and-decisions.md for the matcher grammar." },
+          "then": {
+            "type": "object",
+            "properties": {
+              "action": { "type": "string", "enum": ["bind", "veto", "require_approval", "downgrade_autonomy", "force_provider", "add_step"] },
+              "capability": { "type": ["string", "null"] },
+              "reason_code": { "type": "string" },
+              "message": { "type": ["string", "null"] }
+            }
+          },
+          "severity": { "type": "string", "enum": ["block", "warn"], "default": "block" }
+        }
+      }
+    },
+
+    "policy_table": {
+      "type": "array",
+      "description": "The boring 90%. A lookup table beats a model call: it is free, instant, testable and diffable.",
+      "items": {
+        "type": "object",
+        "required": ["tag", "bind"],
+        "properties": {
+          "tag": { "type": "string" },
+          "when": { "type": "object" },
+          "bind": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+
+    "gray_zone": {
+      "type": "object",
+      "description": "Where judgement genuinely helps: choosing an angle, picking which of three plays fits a fuzzy request, deciding whether a request is one campaign or three.",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "decisions": { "type": "array", "items": { "type": "string" }, "description": "Whitelist of decision kinds the model is allowed to make. Anything not listed is not a model decision." },
+        "model_tier": { "type": "string", "enum": ["nano", "small", "standard", "frontier"], "default": "standard" },
+        "confidence_floor": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.6 },
+        "on_low_confidence": { "type": "string", "enum": ["ask_human", "use_default", "escalate_tier", "split_and_ask"], "default": "ask_human" },
+        "max_options": { "type": "integer", "default": 5, "description": "The model picks from an enumerated, pre-filtered option set. It never free-forms a capability id." }
+      }
+    },
+
+    "defaults": { "type": "object", "additionalProperties": { "type": "string" }, "description": "tag -> capability id, used when nothing else matched. Every tag in the registry MUST have a default or the validator fails the build." },
+
+    "audit": {
+      "type": "object",
+      "properties": {
+        "record_decisions": { "type": "boolean", "default": true },
+        "sample_rate": { "type": "number", "default": 1 },
+        "retain_days": { "type": "integer", "default": 400 }
+      }
+    }
+  }
+}

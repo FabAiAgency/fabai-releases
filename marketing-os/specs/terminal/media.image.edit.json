@@ -1,0 +1,43 @@
+{
+  "capability": {
+    "id": "media.image.edit",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Edit Image",
+    "summary": "Variant, inpaint, background swap, before/after pairing and brand-overlay composition on an existing asset. Editing an asset that already passed brand and rights review is materially cheaper and safer than generating a fresh one.",
+    "owner": "visual",
+    "maturity": "ga",
+    "capability_tags": ["produce.image.edit"],
+    "side_effects": "spend",
+    "idempotent": true,
+    "compensation": "asset.store.delete",
+    "providers": [{ "name": "openai", "model": "gpt-image-1", "tier": "standard", "cost_per_unit_minor": 4, "unit": "image" }],
+    "sla": { "p50_ms": 10000, "p95_ms": 35000, "timeout_ms": 120000 },
+    "retry": { "max_attempts": 3, "backoff": "exponential", "base_ms": 3000 },
+    "requires": { "secrets": ["OPENAI_API_KEY"], "capabilities": ["asset.store.put"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 4 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "source", "kind": "http", "title": "Fetch Source Asset", "group": "Acquire",
+        "with": { "method": "GET", "url": "={{ $json.payload.source_uri }}", "response": "file" } },
+      { "id": "route", "kind": "switch", "title": "Edit Operation", "group": "Edit",
+        "with": { "value": "={{ $('Envelope In').first().json.payload.op }}", "cases": ["variant", "inpaint", "background", "before_after_pair"], "fallback": "variant" } },
+      { "id": "variant", "kind": "http", "title": "Variant", "group": "Edit",
+        "with": { "method": "POST", "url": "https://api.openai.com/v1/images/edits", "auth": "openAiApi", "contentType": "multipart-form-data",
+          "body": { "model": "gpt-image-1", "prompt": "={{ $('Envelope In').first().json.payload.prompt }}", "n": 1 }, "binaryField": "data" } },
+      { "id": "inpaint", "kind": "http", "title": "Inpaint", "group": "Edit",
+        "with": { "method": "POST", "url": "https://api.openai.com/v1/images/edits", "auth": "openAiApi", "contentType": "multipart-form-data",
+          "body": { "model": "gpt-image-1", "prompt": "={{ $('Envelope In').first().json.payload.prompt }}", "mask": "={{ $('Envelope In').first().json.payload.mask_uri }}", "n": 1 }, "binaryField": "data" } },
+      { "id": "background", "kind": "http", "title": "Background Swap", "group": "Edit",
+        "with": { "method": "POST", "url": "={{ $env.HIGGSFIELD_URL }}/v1/images/background", "auth": "headerAuth",
+          "body": { "image_url": "={{ $('Envelope In').first().json.payload.source_uri }}", "prompt": "={{ $('Envelope In').first().json.payload.prompt }}" } } },
+      { "id": "before_after_pair", "kind": "code", "title": "Compose Pair", "group": "Edit",
+        "with": { "code": "// A before/after is a composition, not a generation: two existing frames placed side by side\n// with a consistent divider and label. Generating an 'after' from an 'before' invents evidence,\n// which in a services or health vertical is a compliance failure, not a creative choice.\nconst p = $('Envelope In').first().json.payload;\nif (!p.before_uri || !p.after_uri) throw new Error('VALIDATION_FAILED: before_uri and after_uri are both required for a proof pair');\nreturn [{ json: { composition: 'side_by_side', before_uri: p.before_uri, after_uri: p.after_uri, divider: 'hairline', labels: ['Before', 'After'], render_via: 'media.video.render', evidence_pair: true } }];" } },
+      { "id": "store", "kind": "call", "title": "Store Durably", "group": "Persist",
+        "with": { "capability": "asset.store.put", "payload": { "kind": "image", "derived_from": "={{ [$('Envelope In').first().json.payload.source_asset_id] }}" } } }
+    ]
+  }
+}

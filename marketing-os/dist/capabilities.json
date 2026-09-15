@@ -1,0 +1,2672 @@
+{
+  "generated": true,
+  "note": "Derived from specs/** by the compiler. Do not edit; edit the spec and rebuild.",
+  "version": "1.0.0",
+  "count": 59,
+  "capabilities": {
+    "approve.human.cancel": {
+      "id": "approve.human.cancel",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Cancel Approval Request",
+      "summary": "Compensation for approve.human.request. Withdraws a pending request when the run is abandoned upstream, so a reviewer is never asked to approve something that no longer exists.",
+      "owner": "platform",
+      "maturity": "ga",
+      "capability_tags": [
+        "compensate.approve.human"
+      ],
+      "side_effects": "external_write",
+      "idempotent": true,
+      "compensation": null,
+      "sla": {
+        "p50_ms": 800,
+        "p95_ms": 4000,
+        "timeout_ms": 30000
+      },
+      "retry": {
+        "max_attempts": 5,
+        "backoff": "exponential",
+        "base_ms": 2000
+      },
+      "requires": {
+        "secrets": [
+          "MOS_STATE_URL",
+          "TELEGRAM_BOT_TOKEN"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "observability": {
+        "slo": "99.9% — a compensation that fails leaves the system inconsistent, which is worse than the original failure"
+      },
+      "spec": "specs/terminal/approve.human.cancel.json",
+      "workflow": "dist/n8n/terminal/approve.human.cancel.json",
+      "node_count": 14,
+      "extends": null
+    },
+    "approve.human.request": {
+      "id": "approve.human.request",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Request Human Approval",
+      "summary": "Renders a preview, sends it to the reviewer's surface, and waits on a resumable webhook. An unanswered approval EXPIRES into the parked state — silence is never consent, and a timeout must never fall through into a post.",
+      "owner": "governance",
+      "maturity": "ga",
+      "capability_tags": [
+        "approve.human"
+      ],
+      "side_effects": "external_write",
+      "idempotent": true,
+      "compensation": "approve.human.cancel",
+      "sla": {
+        "p50_ms": 2000,
+        "p95_ms": 8000,
+        "timeout_ms": 86400000,
+        "async": true
+      },
+      "requires": {
+        "secrets": [
+          "TELEGRAM_BOT_TOKEN",
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/approve.human.request.json",
+      "workflow": "dist/n8n/terminal/approve.human.request.json",
+      "node_count": 18,
+      "extends": null
+    },
+    "asset.ledger.append": {
+      "id": "asset.ledger.append",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Append to Run Ledger",
+      "summary": "One row per produced or published artefact in a human-readable sheet, plus the machine telemetry row. The original workflows logged to Sheets ad hoc with different columns each time; a single schema here is what makes a cross-estate dashboard possible at all.",
+      "owner": "platform",
+      "maturity": "ga",
+      "capability_tags": [
+        "asset.log"
+      ],
+      "side_effects": "external_write",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 700,
+        "p95_ms": 3000,
+        "timeout_ms": 30000
+      },
+      "retry": {
+        "max_attempts": 3,
+        "backoff": "exponential",
+        "base_ms": 1500
+      },
+      "requires": {
+        "secrets": [
+          "GOOGLE_SHEETS_OAUTH"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/asset.ledger.append.json",
+      "workflow": "dist/n8n/terminal/asset.ledger.append.json",
+      "node_count": 14,
+      "extends": null
+    },
+    "asset.store.delete": {
+      "id": "asset.store.delete",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Delete Stored Asset",
+      "summary": "Compensation for asset.store.put. Removes the object and tombstones the DAM row rather than hard-deleting it — an orphaned row is recoverable, a lost audit trail is not.",
+      "owner": "platform",
+      "maturity": "ga",
+      "capability_tags": [
+        "compensate.asset.store"
+      ],
+      "side_effects": "external_write",
+      "idempotent": true,
+      "compensation": null,
+      "sla": {
+        "p50_ms": 800,
+        "p95_ms": 4000,
+        "timeout_ms": 30000
+      },
+      "retry": {
+        "max_attempts": 5,
+        "backoff": "exponential",
+        "base_ms": 2000
+      },
+      "requires": {
+        "secrets": [
+          "GOOGLE_DRIVE_OAUTH",
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "observability": {
+        "slo": "99.9% — a compensation that fails leaves the system inconsistent, which is worse than the original failure"
+      },
+      "spec": "specs/terminal/asset.store.delete.json",
+      "workflow": "dist/n8n/terminal/asset.store.delete.json",
+      "node_count": 14,
+      "extends": null
+    },
+    "asset.store.put": {
+      "id": "asset.store.put",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Store Asset Durably",
+      "summary": "Copies a provider URL or binary into tenant-scoped durable storage, computes a checksum for dedupe, embeds it for semantic search, and registers it in the DAM. Every producing capability ends here — that single rule is what turns scattered generations into a compounding asset library.",
+      "owner": "dam",
+      "maturity": "ga",
+      "capability_tags": [
+        "asset.store"
+      ],
+      "output_schema": "contracts/creative-asset.schema.json",
+      "side_effects": "external_write",
+      "idempotent": true,
+      "compensation": "asset.store.delete",
+      "providers": [
+        {
+          "name": "gdrive",
+          "tier": "nano",
+          "cost_per_unit_minor": 0,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 1500,
+        "p95_ms": 6000,
+        "timeout_ms": 60000
+      },
+      "retry": {
+        "max_attempts": 3,
+        "backoff": "exponential",
+        "base_ms": 2000
+      },
+      "requires": {
+        "secrets": [
+          "GOOGLE_DRIVE_OAUTH",
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/asset.store.put.json",
+      "workflow": "dist/n8n/terminal/asset.store.put.json",
+      "node_count": 23,
+      "extends": null
+    },
+    "copy.localize": {
+      "id": "copy.localize",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Localise Copy",
+      "summary": "Adapts copy into a target locale — not translation: currency, date format, idiom, proof conventions and the locale's own compliance variant. Separated from generation so a locale can be added without regenerating source copy.",
+      "owner": "content",
+      "maturity": "beta",
+      "capability_tags": [
+        "produce.localize"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "anthropic",
+          "model": "claude-sonnet-5",
+          "tier": "standard",
+          "cost_per_unit_minor": 2,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 4000,
+        "p95_ms": 15000,
+        "timeout_ms": 60000
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 2,
+        "variable_by": [
+          "locales"
+        ]
+      },
+      "spec": "specs/terminal/copy.localize.json",
+      "workflow": "dist/n8n/terminal/copy.localize.json",
+      "node_count": 18,
+      "extends": null
+    },
+    "copy.longform.generate": {
+      "id": "copy.longform.generate",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Generate Long-form Copy",
+      "summary": "Blog posts, articles, case studies, PDP copy, email sequences, one-pagers. Structure comes from the brief and the vertical profile, never from a hard-coded template inside the workflow.",
+      "owner": "content",
+      "maturity": "ga",
+      "capability_tags": [
+        "produce.copy.longform"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "anthropic",
+          "model": "claude-sonnet-5",
+          "tier": "standard",
+          "cost_per_unit_minor": 6,
+          "unit": "call"
+        },
+        {
+          "name": "openai",
+          "model": "gpt-4.1",
+          "tier": "standard",
+          "cost_per_unit_minor": 6,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 12000,
+        "p95_ms": 45000,
+        "timeout_ms": 120000
+      },
+      "retry": {
+        "max_attempts": 2,
+        "backoff": "exponential",
+        "base_ms": 4000
+      },
+      "requires": {
+        "secrets": [
+          "ANTHROPIC_API_KEY"
+        ],
+        "capabilities": [
+          "research.web.search"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 6,
+        "variable_by": [
+          "locales",
+          "word_count"
+        ]
+      },
+      "spec": "specs/terminal/copy.longform.generate.json",
+      "workflow": "dist/n8n/terminal/copy.longform.generate.json",
+      "node_count": 24,
+      "extends": null
+    },
+    "copy.script.generate": {
+      "id": "copy.script.generate",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Generate Video Script",
+      "summary": "A shot-by-shot script whose beat structure comes from the vertical's `shot_grammar`. This is the mechanism that makes one video factory produce a UGC unboxing for DTC, a before/after for a plumber and an annotated mechanism walkthrough for an equipment maker — same workflow, different grammar.",
+      "owner": "content",
+      "maturity": "ga",
+      "capability_tags": [
+        "produce.script"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "anthropic",
+          "model": "claude-sonnet-5",
+          "tier": "standard",
+          "cost_per_unit_minor": 3,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 6000,
+        "p95_ms": 20000,
+        "timeout_ms": 60000
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 3,
+        "variable_by": [
+          "variants",
+          "duration_s"
+        ]
+      },
+      "spec": "specs/terminal/copy.script.generate.json",
+      "workflow": "dist/n8n/terminal/copy.script.generate.json",
+      "node_count": 20,
+      "extends": null
+    },
+    "copy.short.generate": {
+      "id": "copy.short.generate",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Generate Short-form Copy",
+      "summary": "Social posts, captions, headlines, subject lines, ad variants, CTAs. Produces N variants in one call because variant count is the lever that makes paid testing and channel fan-out affordable.",
+      "owner": "content",
+      "maturity": "ga",
+      "capability_tags": [
+        "produce.copy.short"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "tier": "small",
+          "cost_per_unit_minor": 1,
+          "unit": "call"
+        },
+        {
+          "name": "openai",
+          "model": "gpt-4.1-mini",
+          "tier": "small",
+          "cost_per_unit_minor": 1,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 3000,
+        "p95_ms": 12000,
+        "timeout_ms": 45000
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 1,
+        "variable_by": [
+          "variants",
+          "locales"
+        ]
+      },
+      "spec": "specs/terminal/copy.short.generate.json",
+      "workflow": "dist/n8n/terminal/copy.short.generate.json",
+      "node_count": 19,
+      "extends": null
+    },
+    "dist.publish.blog": {
+      "id": "dist.publish.blog",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Publish to Blog / CMS",
+      "summary": "Owned-channel adapter. Publishes as a draft by default and requires an explicit flag to go live — owned properties carry SEO consequences that outlive the campaign.",
+      "owner": "distribution",
+      "maturity": "beta",
+      "capability_tags": [
+        "distribute.publish"
+      ],
+      "input_schema": "contracts/publish-request.schema.json",
+      "side_effects": "publish",
+      "idempotent": true,
+      "compensation": "dist.unpublish.blog",
+      "providers": [
+        {
+          "name": "webhook_cms",
+          "tier": "nano",
+          "cost_per_unit_minor": 0,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 1200,
+        "p95_ms": 5000,
+        "timeout_ms": 45000
+      },
+      "retry": {
+        "max_attempts": 3,
+        "backoff": "exponential",
+        "base_ms": 2500
+      },
+      "requires": {
+        "secrets": [
+          "CMS_WEBHOOK_URL",
+          "CMS_TOKEN"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/dist.publish.blog.json",
+      "workflow": "dist/n8n/terminal/dist.publish.blog.json",
+      "node_count": 19,
+      "extends": null
+    },
+    "dist.publish.email": {
+      "id": "dist.publish.email",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Publish to Email",
+      "summary": "Owned-list adapter. The highest-consequence organic channel in the estate: an email cannot be unsent, reaches an audience that gave permission, and a mistake costs deliverability that takes months to rebuild. Always approval-gated, always suppression-checked.",
+      "owner": "distribution",
+      "maturity": "beta",
+      "capability_tags": [
+        "distribute.publish"
+      ],
+      "input_schema": "contracts/publish-request.schema.json",
+      "side_effects": "publish",
+      "idempotent": true,
+      "compensation": null,
+      "providers": [
+        {
+          "name": "esp_webhook",
+          "tier": "nano",
+          "cost_per_unit_minor": 0,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 2000,
+        "p95_ms": 8000,
+        "timeout_ms": 60000
+      },
+      "retry": {
+        "max_attempts": 2,
+        "backoff": "exponential",
+        "base_ms": 5000
+      },
+      "requires": {
+        "secrets": [
+          "ESP_API_KEY",
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/dist.publish.email.json",
+      "workflow": "dist/n8n/terminal/dist.publish.email.json",
+      "node_count": 19,
+      "extends": null
+    },
+    "dist.publish.linkedin": {
+      "id": "dist.publish.linkedin",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Publish to LinkedIn",
+      "summary": "Channel adapter with asset registration, first-comment support and scheduling. Compensable: a post can be deleted, so this one declares a compensation capability and the orchestrator can roll it back if a sibling step fails hard.",
+      "owner": "distribution",
+      "maturity": "ga",
+      "capability_tags": [
+        "distribute.publish"
+      ],
+      "input_schema": "contracts/publish-request.schema.json",
+      "side_effects": "publish",
+      "idempotent": true,
+      "compensation": "dist.unpublish.linkedin",
+      "providers": [
+        {
+          "name": "linkedin",
+          "tier": "nano",
+          "cost_per_unit_minor": 0,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 1500,
+        "p95_ms": 6000,
+        "timeout_ms": 45000
+      },
+      "retry": {
+        "max_attempts": 3,
+        "backoff": "exponential",
+        "base_ms": 3000,
+        "retry_on": [
+          "RATE_LIMITED",
+          "TIMEOUT"
+        ]
+      },
+      "circuit_breaker": {
+        "failure_threshold": 3,
+        "window_s": 600,
+        "cooldown_s": 900
+      },
+      "requires": {
+        "secrets": [
+          "LINKEDIN_OAUTH"
+        ],
+        "scopes": [
+          "w_member_social",
+          "w_organization_social"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "observability": {
+        "emits": [
+          "published"
+        ]
+      },
+      "spec": "specs/terminal/dist.publish.linkedin.json",
+      "workflow": "dist/n8n/terminal/dist.publish.linkedin.json",
+      "node_count": 22,
+      "extends": null
+    },
+    "dist.publish.telegram": {
+      "id": "dist.publish.telegram",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Publish to Telegram",
+      "summary": "Channel adapter. Consumes a channel-neutral PublishRequest and speaks Telegram. Re-verifies its own gates rather than trusting the caller — defence in depth on the only step the public can see.",
+      "owner": "distribution",
+      "maturity": "ga",
+      "capability_tags": [
+        "distribute.publish"
+      ],
+      "input_schema": "contracts/publish-request.schema.json",
+      "side_effects": "publish",
+      "idempotent": true,
+      "compensation": null,
+      "providers": [
+        {
+          "name": "telegram",
+          "tier": "nano",
+          "cost_per_unit_minor": 0,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 700,
+        "p95_ms": 3000,
+        "timeout_ms": 30000
+      },
+      "retry": {
+        "max_attempts": 3,
+        "backoff": "exponential",
+        "base_ms": 2000,
+        "retry_on": [
+          "RATE_LIMITED",
+          "TIMEOUT"
+        ]
+      },
+      "requires": {
+        "secrets": [
+          "TELEGRAM_BOT_TOKEN"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "observability": {
+        "emits": [
+          "published"
+        ],
+        "runbook": "docs/05-operations.md#publish-adapters"
+      },
+      "spec": "specs/terminal/dist.publish.telegram.json",
+      "workflow": "dist/n8n/terminal/dist.publish.telegram.json",
+      "node_count": 26,
+      "extends": null
+    },
+    "dist.schedule.cancel": {
+      "id": "dist.schedule.cancel",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Cancel Scheduled Publication",
+      "summary": "Compensation for dist.schedule.enqueue. Removes a queued item before its slot. The cheapest possible rollback, and the reason scheduling is preferred over immediate publication whenever the brief allows it.",
+      "owner": "platform",
+      "maturity": "ga",
+      "capability_tags": [
+        "compensate.distribute.schedule"
+      ],
+      "side_effects": "external_write",
+      "idempotent": true,
+      "compensation": null,
+      "sla": {
+        "p50_ms": 800,
+        "p95_ms": 4000,
+        "timeout_ms": 30000
+      },
+      "retry": {
+        "max_attempts": 5,
+        "backoff": "exponential",
+        "base_ms": 2000
+      },
+      "requires": {
+        "secrets": [
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "observability": {
+        "slo": "99.9% — a compensation that fails leaves the system inconsistent, which is worse than the original failure"
+      },
+      "spec": "specs/terminal/dist.schedule.cancel.json",
+      "workflow": "dist/n8n/terminal/dist.schedule.cancel.json",
+      "node_count": 13,
+      "extends": null
+    },
+    "dist.schedule.enqueue": {
+      "id": "dist.schedule.enqueue",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Schedule / Queue Publication",
+      "summary": "Holds a ready PublishRequest until its slot, respecting per-channel rate limits and per-tenant pacing. Without this, a campaign that produces twelve posts publishes twelve posts in ninety seconds and burns the account.",
+      "owner": "distribution",
+      "maturity": "beta",
+      "capability_tags": [
+        "distribute.schedule"
+      ],
+      "side_effects": "internal_write",
+      "idempotent": true,
+      "compensation": "dist.schedule.cancel",
+      "sla": {
+        "p50_ms": 300,
+        "p95_ms": 1500,
+        "timeout_ms": 20000
+      },
+      "requires": {
+        "secrets": [
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/dist.schedule.enqueue.json",
+      "workflow": "dist/n8n/terminal/dist.schedule.enqueue.json",
+      "node_count": 14,
+      "extends": null
+    },
+    "dist.unpublish.blog": {
+      "id": "dist.unpublish.blog",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Unpublish Blog Post",
+      "summary": "Compensation for dist.publish.blog. Reverts to draft rather than deleting: a deleted URL that was indexed produces a 404 that outlives the mistake.",
+      "owner": "platform",
+      "maturity": "ga",
+      "capability_tags": [
+        "compensate.distribute.publish"
+      ],
+      "side_effects": "external_write",
+      "idempotent": true,
+      "compensation": null,
+      "sla": {
+        "p50_ms": 800,
+        "p95_ms": 4000,
+        "timeout_ms": 30000
+      },
+      "retry": {
+        "max_attempts": 5,
+        "backoff": "exponential",
+        "base_ms": 2000
+      },
+      "requires": {
+        "secrets": [
+          "CMS_WEBHOOK_URL",
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "observability": {
+        "slo": "99.9% — a compensation that fails leaves the system inconsistent, which is worse than the original failure"
+      },
+      "spec": "specs/terminal/dist.unpublish.blog.json",
+      "workflow": "dist/n8n/terminal/dist.unpublish.blog.json",
+      "node_count": 14,
+      "extends": null
+    },
+    "dist.unpublish.linkedin": {
+      "id": "dist.unpublish.linkedin",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Unpublish LinkedIn Post",
+      "summary": "Compensation for dist.publish.linkedin. Deletes the post and records the reversal against the original trace, so a rolled-back campaign reads as one story in the ledger rather than two unrelated events.",
+      "owner": "platform",
+      "maturity": "ga",
+      "capability_tags": [
+        "compensate.distribute.publish"
+      ],
+      "side_effects": "external_write",
+      "idempotent": true,
+      "compensation": null,
+      "sla": {
+        "p50_ms": 800,
+        "p95_ms": 4000,
+        "timeout_ms": 30000
+      },
+      "retry": {
+        "max_attempts": 5,
+        "backoff": "exponential",
+        "base_ms": 2000
+      },
+      "requires": {
+        "secrets": [
+          "LINKEDIN_OAUTH",
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "observability": {
+        "slo": "99.9% — a compensation that fails leaves the system inconsistent, which is worse than the original failure"
+      },
+      "spec": "specs/terminal/dist.unpublish.linkedin.json",
+      "workflow": "dist/n8n/terminal/dist.unpublish.linkedin.json",
+      "node_count": 14,
+      "extends": null
+    },
+    "intake.audio.transcribe": {
+      "id": "intake.audio.transcribe",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Transcribe Audio",
+      "summary": "Voice note or audio file in, text out. Nothing else. The original screenshot fused download+transcribe+routing into the trigger workflow; splitting it means every future intake channel (WhatsApp, Slack huddle, phone call, meeting recorder) reuses this untouched.",
+      "owner": "platform",
+      "maturity": "ga",
+      "capability_tags": [
+        "intake.transcribe"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "openai",
+          "model": "whisper-1",
+          "tier": "small",
+          "cost_per_unit_minor": 0.6,
+          "unit": "minute"
+        }
+      ],
+      "sla": {
+        "p50_ms": 2500,
+        "p95_ms": 9000,
+        "timeout_ms": 60000
+      },
+      "retry": {
+        "max_attempts": 3,
+        "backoff": "exponential",
+        "base_ms": 2000
+      },
+      "requires": {
+        "secrets": [
+          "OPENAI_API_KEY"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 1,
+        "variable_by": [
+          "duration_s"
+        ]
+      },
+      "observability": {
+        "slo": "99.0% success over 7d"
+      },
+      "spec": "specs/terminal/intake.audio.transcribe.json",
+      "workflow": "dist/n8n/terminal/intake.audio.transcribe.json",
+      "node_count": 17,
+      "extends": null
+    },
+    "intake.clarification.request": {
+      "id": "intake.clarification.request",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Ask a Clarifying Question",
+      "summary": "When the brief is too thin to act on, the system asks rather than guesses. Costs one message; a wrong guess costs a full production run and a human's trust in the system.",
+      "owner": "intake",
+      "maturity": "ga",
+      "capability_tags": [
+        "ops.clarify"
+      ],
+      "side_effects": "external_write",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 900,
+        "p95_ms": 4000,
+        "timeout_ms": 86400000,
+        "async": true
+      },
+      "requires": {
+        "secrets": [
+          "TELEGRAM_BOT_TOKEN",
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/intake.clarification.request.json",
+      "workflow": "dist/n8n/terminal/intake.clarification.request.json",
+      "node_count": 15,
+      "extends": null
+    },
+    "intake.message.normalize": {
+      "id": "intake.message.normalize",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Normalise Inbound Message",
+      "summary": "Any inbound shape (Telegram update, Slack event, email, web form, CRM webhook, schedule tick) collapses into one normalised message. This is the seam that makes the system omni-channel: a new intake channel is an adapter that produces this shape, and nothing downstream changes.",
+      "owner": "platform",
+      "maturity": "ga",
+      "capability_tags": [
+        "intake.normalize"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 40,
+        "p95_ms": 200,
+        "timeout_ms": 5000
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/intake.message.normalize.json",
+      "workflow": "dist/n8n/terminal/intake.message.normalize.json",
+      "node_count": 14,
+      "extends": null
+    },
+    "learn.playbook.revert": {
+      "id": "learn.playbook.revert",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Revert Playbook Change",
+      "summary": "Compensation for learn.playbook.update. Every accepted profile change is versioned, so reverting is restoring a version — not reconstructing what the profile used to say from memory.",
+      "owner": "platform",
+      "maturity": "ga",
+      "capability_tags": [
+        "compensate.learn.update"
+      ],
+      "side_effects": "external_write",
+      "idempotent": true,
+      "compensation": null,
+      "sla": {
+        "p50_ms": 800,
+        "p95_ms": 4000,
+        "timeout_ms": 30000
+      },
+      "retry": {
+        "max_attempts": 5,
+        "backoff": "exponential",
+        "base_ms": 2000
+      },
+      "requires": {
+        "secrets": [
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "observability": {
+        "slo": "99.9% — a compensation that fails leaves the system inconsistent, which is worse than the original failure"
+      },
+      "spec": "specs/terminal/learn.playbook.revert.json",
+      "workflow": "dist/n8n/terminal/learn.playbook.revert.json",
+      "node_count": 13,
+      "extends": null
+    },
+    "learn.playbook.update": {
+      "id": "learn.playbook.update",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Update Playbook from Results",
+      "summary": "The learning step. Proposes adjustments to channel weights, angle preferences and reuse bias from decisive results — and PROPOSES is the operative word: profile changes are versioned and require approval, because an autonomous system that silently rewrites its own strategy cannot be reasoned about.",
+      "owner": "measurement",
+      "maturity": "experimental",
+      "capability_tags": [
+        "learn.update"
+      ],
+      "side_effects": "internal_write",
+      "idempotent": true,
+      "compensation": "learn.playbook.revert",
+      "providers": [
+        {
+          "name": "anthropic",
+          "model": "claude-sonnet-5",
+          "tier": "standard",
+          "cost_per_unit_minor": 3,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 5000,
+        "p95_ms": 20000,
+        "timeout_ms": 90000
+      },
+      "requires": {
+        "secrets": [
+          "ANTHROPIC_API_KEY",
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 3
+      },
+      "spec": "specs/terminal/learn.playbook.update.json",
+      "workflow": "dist/n8n/terminal/learn.playbook.update.json",
+      "node_count": 21,
+      "extends": null
+    },
+    "measure.creative.score": {
+      "id": "measure.creative.score",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Score Creative",
+      "summary": "Turns raw per-channel metrics into one normalised 0-1 score comparable across channels and verticals, with a confidence weight for sample size. A score without confidence causes the system to chase noise, which is worse than not scoring at all.",
+      "owner": "measurement",
+      "maturity": "beta",
+      "capability_tags": [
+        "measure.score"
+      ],
+      "side_effects": "internal_write",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 400,
+        "p95_ms": 1500,
+        "timeout_ms": 20000
+      },
+      "requires": {
+        "secrets": [
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/measure.creative.score.json",
+      "workflow": "dist/n8n/terminal/measure.creative.score.json",
+      "node_count": 15,
+      "extends": null
+    },
+    "measure.metrics.collect": {
+      "id": "measure.metrics.collect",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Collect Channel Metrics",
+      "summary": "Pulls per-post metrics back from each channel and writes them onto the ASSET, not just a report. That write-back is what closes the loop: tomorrow's asset search can filter on what actually worked.",
+      "owner": "measurement",
+      "maturity": "beta",
+      "capability_tags": [
+        "measure.collect"
+      ],
+      "side_effects": "internal_write",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 2000,
+        "p95_ms": 9000,
+        "timeout_ms": 60000
+      },
+      "retry": {
+        "max_attempts": 3,
+        "backoff": "exponential",
+        "base_ms": 5000
+      },
+      "requires": {
+        "secrets": [
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/measure.metrics.collect.json",
+      "workflow": "dist/n8n/terminal/measure.metrics.collect.json",
+      "node_count": 20,
+      "extends": null
+    },
+    "media.audio.vo.generate": {
+      "id": "media.audio.vo.generate",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Generate Voiceover",
+      "summary": "Script to narration, with the voice characteristics taken from the vertical profile rather than hard-coded. Returns a durable audio asset plus per-line timings, which is what makes caption sync and beat alignment possible downstream.",
+      "owner": "motion",
+      "maturity": "ga",
+      "capability_tags": [
+        "produce.audio.vo"
+      ],
+      "side_effects": "spend",
+      "idempotent": true,
+      "compensation": "asset.store.delete",
+      "providers": [
+        {
+          "name": "elevenlabs",
+          "model": "eleven_multilingual_v2",
+          "tier": "standard",
+          "cost_per_unit_minor": 2,
+          "unit": "second"
+        },
+        {
+          "name": "openai",
+          "model": "tts-1-hd",
+          "tier": "small",
+          "cost_per_unit_minor": 1,
+          "unit": "second"
+        }
+      ],
+      "sla": {
+        "p50_ms": 5000,
+        "p95_ms": 20000,
+        "timeout_ms": 120000
+      },
+      "retry": {
+        "max_attempts": 3,
+        "backoff": "exponential",
+        "base_ms": 2000
+      },
+      "requires": {
+        "secrets": [
+          "ELEVENLABS_API_KEY"
+        ],
+        "capabilities": [
+          "asset.store.put"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 20,
+        "variable_by": [
+          "duration_s",
+          "locales"
+        ]
+      },
+      "spec": "specs/terminal/media.audio.vo.generate.json",
+      "workflow": "dist/n8n/terminal/media.audio.vo.generate.json",
+      "node_count": 19,
+      "extends": null
+    },
+    "media.captions.generate": {
+      "id": "media.captions.generate",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Generate Captions",
+      "summary": "Burned-in caption cues from voiceover timings or a transcript. Not decoration: most short-form video is watched with sound off, and every major platform ranks accessible content higher.",
+      "owner": "motion",
+      "maturity": "ga",
+      "capability_tags": [
+        "produce.captions"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 200,
+        "p95_ms": 900,
+        "timeout_ms": 15000
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/media.captions.generate.json",
+      "workflow": "dist/n8n/terminal/media.captions.generate.json",
+      "node_count": 13,
+      "extends": null
+    },
+    "media.image.edit": {
+      "id": "media.image.edit",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Edit Image",
+      "summary": "Variant, inpaint, background swap, before/after pairing and brand-overlay composition on an existing asset. Editing an asset that already passed brand and rights review is materially cheaper and safer than generating a fresh one.",
+      "owner": "visual",
+      "maturity": "ga",
+      "capability_tags": [
+        "produce.image.edit"
+      ],
+      "side_effects": "spend",
+      "idempotent": true,
+      "compensation": "asset.store.delete",
+      "providers": [
+        {
+          "name": "openai",
+          "model": "gpt-image-1",
+          "tier": "standard",
+          "cost_per_unit_minor": 4,
+          "unit": "image"
+        }
+      ],
+      "sla": {
+        "p50_ms": 10000,
+        "p95_ms": 35000,
+        "timeout_ms": 120000
+      },
+      "retry": {
+        "max_attempts": 3,
+        "backoff": "exponential",
+        "base_ms": 3000
+      },
+      "requires": {
+        "secrets": [
+          "OPENAI_API_KEY"
+        ],
+        "capabilities": [
+          "asset.store.put"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 4
+      },
+      "spec": "specs/terminal/media.image.edit.json",
+      "workflow": "dist/n8n/terminal/media.image.edit.json",
+      "node_count": 23,
+      "extends": null
+    },
+    "media.image.generate": {
+      "id": "media.image.generate",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Generate Image",
+      "summary": "One prompt in, one durable asset out. Handles provider fallback, base64-to-binary conversion and immediate promotion to durable storage — provider URLs expire, and an asset that expires mid-campaign is an outage nobody catches until a post is already live.",
+      "owner": "visual",
+      "maturity": "ga",
+      "capability_tags": [
+        "produce.image"
+      ],
+      "output_schema": "contracts/creative-asset.schema.json",
+      "side_effects": "spend",
+      "idempotent": true,
+      "compensation": "asset.store.delete",
+      "providers": [
+        {
+          "name": "openai",
+          "model": "gpt-image-1",
+          "tier": "standard",
+          "cost_per_unit_minor": 4,
+          "unit": "image"
+        },
+        {
+          "name": "higgsfield",
+          "model": "hf_image",
+          "tier": "standard",
+          "cost_per_unit_minor": 3,
+          "unit": "image"
+        }
+      ],
+      "sla": {
+        "p50_ms": 9000,
+        "p95_ms": 30000,
+        "timeout_ms": 120000
+      },
+      "retry": {
+        "max_attempts": 3,
+        "backoff": "exponential",
+        "base_ms": 3000,
+        "retry_on": [
+          "RATE_LIMITED",
+          "TIMEOUT",
+          "PROVIDER_ERROR"
+        ]
+      },
+      "circuit_breaker": {
+        "failure_threshold": 5,
+        "window_s": 300,
+        "cooldown_s": 120
+      },
+      "requires": {
+        "secrets": [
+          "OPENAI_API_KEY"
+        ],
+        "capabilities": [
+          "asset.store.put"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 4,
+        "variable_by": [
+          "variants"
+        ]
+      },
+      "spec": "specs/terminal/media.image.generate.json",
+      "workflow": "dist/n8n/terminal/media.image.generate.json",
+      "node_count": 20,
+      "extends": null
+    },
+    "media.image.search": {
+      "id": "media.image.search",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Search Asset Library (DAM)",
+      "summary": "Semantic + structured search over everything the tenant has ever produced, filtered by rights and performance. The screenshots had this as a single 'Search Images' tool; promoted here to a first-class terminal because reuse-before-generate is the largest cost lever in the estate.",
+      "owner": "dam",
+      "maturity": "ga",
+      "capability_tags": [
+        "asset.search"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "internal",
+          "tier": "nano",
+          "cost_per_unit_minor": 0.1,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 300,
+        "p95_ms": 1200,
+        "timeout_ms": 15000
+      },
+      "requires": {
+        "secrets": [
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/media.image.search.json",
+      "workflow": "dist/n8n/terminal/media.image.search.json",
+      "node_count": 17,
+      "extends": null
+    },
+    "media.video.clip.generate": {
+      "id": "media.video.clip.generate",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Generate Video Clip",
+      "summary": "One beat, one clip. Submits an async job and POLLS to completion with a bounded budget. The original workflow used a fixed 90-second Wait node, which is wrong in both directions — it stalls fast jobs and silently truncates slow ones. Polling with a deadline fixes both.",
+      "owner": "motion",
+      "maturity": "ga",
+      "capability_tags": [
+        "produce.video.clip"
+      ],
+      "side_effects": "spend",
+      "idempotent": true,
+      "compensation": "asset.store.delete",
+      "providers": [
+        {
+          "name": "higgsfield",
+          "model": "hf_video",
+          "tier": "standard",
+          "cost_per_unit_minor": 25,
+          "unit": "second"
+        },
+        {
+          "name": "fal",
+          "model": "kling-2",
+          "tier": "standard",
+          "cost_per_unit_minor": 30,
+          "unit": "second"
+        }
+      ],
+      "sla": {
+        "p50_ms": 60000,
+        "p95_ms": 240000,
+        "timeout_ms": 600000,
+        "async": true
+      },
+      "retry": {
+        "max_attempts": 2,
+        "backoff": "exponential",
+        "base_ms": 10000
+      },
+      "circuit_breaker": {
+        "failure_threshold": 4,
+        "window_s": 600,
+        "cooldown_s": 300
+      },
+      "requires": {
+        "secrets": [
+          "HIGGSFIELD_API_KEY"
+        ],
+        "capabilities": [
+          "asset.store.put"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 120,
+        "variable_by": [
+          "duration_s",
+          "variants"
+        ]
+      },
+      "spec": "specs/terminal/media.video.clip.generate.json",
+      "workflow": "dist/n8n/terminal/media.video.clip.generate.json",
+      "node_count": 25,
+      "extends": null
+    },
+    "media.video.render": {
+      "id": "media.video.render",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Render Video",
+      "summary": "Clips + voiceover + captions + brand furniture composed into a finished cut. Everything about the LOOK comes from the timeline template resolved per vertical; this workflow only knows how to assemble and poll.",
+      "owner": "motion",
+      "maturity": "ga",
+      "capability_tags": [
+        "assemble.video"
+      ],
+      "side_effects": "spend",
+      "idempotent": true,
+      "compensation": "asset.store.delete",
+      "providers": [
+        {
+          "name": "creatomate",
+          "model": "render_v2",
+          "tier": "standard",
+          "cost_per_unit_minor": 15,
+          "unit": "minute"
+        },
+        {
+          "name": "shotstack",
+          "model": "render",
+          "tier": "standard",
+          "cost_per_unit_minor": 18,
+          "unit": "minute"
+        }
+      ],
+      "sla": {
+        "p50_ms": 45000,
+        "p95_ms": 180000,
+        "timeout_ms": 600000,
+        "async": true
+      },
+      "retry": {
+        "max_attempts": 2,
+        "backoff": "exponential",
+        "base_ms": 8000
+      },
+      "requires": {
+        "secrets": [
+          "CREATOMATE_API_KEY"
+        ],
+        "capabilities": [
+          "asset.store.put"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 15,
+        "variable_by": [
+          "duration_s",
+          "variants"
+        ]
+      },
+      "spec": "specs/terminal/media.video.render.json",
+      "workflow": "dist/n8n/terminal/media.video.render.json",
+      "node_count": 26,
+      "extends": null
+    },
+    "media.video.render.before_after": {
+      "id": "media.video.render.before_after",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Render Video — Before / After Proof",
+      "summary": "Bound by local services. A wipe between two frames shot from the same position, with a locked evidence guarantee: the renderer refuses a pair whose frames were not flagged as real captures.",
+      "owner": "motion",
+      "maturity": "ga",
+      "capability_tags": [
+        "assemble.video"
+      ],
+      "side_effects": "spend",
+      "idempotent": true,
+      "compensation": "asset.store.delete",
+      "providers": [
+        {
+          "name": "creatomate",
+          "model": "render_v2",
+          "tier": "standard",
+          "cost_per_unit_minor": 15,
+          "unit": "minute"
+        },
+        {
+          "name": "shotstack",
+          "model": "render",
+          "tier": "standard",
+          "cost_per_unit_minor": 18,
+          "unit": "minute"
+        }
+      ],
+      "sla": {
+        "p50_ms": 45000,
+        "p95_ms": 180000,
+        "timeout_ms": 600000,
+        "async": true
+      },
+      "retry": {
+        "max_attempts": 2,
+        "backoff": "exponential",
+        "base_ms": 8000
+      },
+      "requires": {
+        "secrets": [
+          "CREATOMATE_API_KEY"
+        ],
+        "capabilities": [
+          "asset.store.put"
+        ]
+      },
+      "verticals": [
+        "local_services",
+        "health_wellness"
+      ],
+      "cost_model": {
+        "estimate_minor_units": 15,
+        "variable_by": [
+          "duration_s",
+          "variants"
+        ]
+      },
+      "spec": "specs/terminal/media.video.render.before_after.json",
+      "workflow": "dist/n8n/terminal/media.video.render.before_after.json",
+      "node_count": 26,
+      "extends": "media.video.render"
+    },
+    "media.video.render.explainer_wide": {
+      "id": "media.video.render.explainer_wide",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Render Video — Explainer Wide",
+      "summary": "Bound by B2B software, industrial and home goods long-form. Slower cuts, lower-third captions, room for on-screen annotation, logo bug persistent.",
+      "owner": "motion",
+      "maturity": "ga",
+      "capability_tags": [
+        "assemble.video"
+      ],
+      "side_effects": "spend",
+      "idempotent": true,
+      "compensation": "asset.store.delete",
+      "providers": [
+        {
+          "name": "creatomate",
+          "model": "render_v2",
+          "tier": "standard",
+          "cost_per_unit_minor": 15,
+          "unit": "minute"
+        },
+        {
+          "name": "shotstack",
+          "model": "render",
+          "tier": "standard",
+          "cost_per_unit_minor": 18,
+          "unit": "minute"
+        }
+      ],
+      "sla": {
+        "p50_ms": 45000,
+        "p95_ms": 180000,
+        "timeout_ms": 600000,
+        "async": true
+      },
+      "retry": {
+        "max_attempts": 2,
+        "backoff": "exponential",
+        "base_ms": 8000
+      },
+      "requires": {
+        "secrets": [
+          "CREATOMATE_API_KEY"
+        ],
+        "capabilities": [
+          "asset.store.put"
+        ]
+      },
+      "verticals": [
+        "b2b_saas",
+        "b2b_industrial",
+        "home_goods",
+        "professional_services"
+      ],
+      "cost_model": {
+        "estimate_minor_units": 15,
+        "variable_by": [
+          "duration_s",
+          "variants"
+        ]
+      },
+      "spec": "specs/terminal/media.video.render.explainer_wide.json",
+      "workflow": "dist/n8n/terminal/media.video.render.explainer_wide.json",
+      "node_count": 26,
+      "extends": "media.video.render"
+    },
+    "media.video.render.ugc_vertical": {
+      "id": "media.video.render.ugc_vertical",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Render Video — UGC Vertical",
+      "summary": "Bound by e-commerce and any 9:16 slot. Hard cuts, oversized captions in the safe area, product held high in frame, offer end-card. A different FILM, not a different pipeline.",
+      "owner": "motion",
+      "maturity": "ga",
+      "capability_tags": [
+        "assemble.video"
+      ],
+      "side_effects": "spend",
+      "idempotent": true,
+      "compensation": "asset.store.delete",
+      "providers": [
+        {
+          "name": "creatomate",
+          "model": "render_v2",
+          "tier": "standard",
+          "cost_per_unit_minor": 15,
+          "unit": "minute"
+        },
+        {
+          "name": "shotstack",
+          "model": "render",
+          "tier": "standard",
+          "cost_per_unit_minor": 18,
+          "unit": "minute"
+        }
+      ],
+      "sla": {
+        "p50_ms": 45000,
+        "p95_ms": 180000,
+        "timeout_ms": 600000,
+        "async": true
+      },
+      "retry": {
+        "max_attempts": 2,
+        "backoff": "exponential",
+        "base_ms": 8000
+      },
+      "requires": {
+        "secrets": [
+          "CREATOMATE_API_KEY"
+        ],
+        "capabilities": [
+          "asset.store.put"
+        ]
+      },
+      "verticals": [
+        "ecommerce_dtc",
+        "home_goods"
+      ],
+      "cost_model": {
+        "estimate_minor_units": 15,
+        "variable_by": [
+          "duration_s",
+          "variants"
+        ]
+      },
+      "spec": "specs/terminal/media.video.render.ugc_vertical.json",
+      "workflow": "dist/n8n/terminal/media.video.render.ugc_vertical.json",
+      "node_count": 26,
+      "extends": "media.video.render"
+    },
+    "ops.budget.check": {
+      "id": "ops.budget.check",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Budget & Policy Guard",
+      "summary": "Called before every billable step. Returns allow / downgrade / deny. Centralising this is what lets a tenant cap be enforced across forty workflows without forty copies of the same arithmetic.",
+      "owner": "platform",
+      "maturity": "ga",
+      "capability_tags": [
+        "ops.budget"
+      ],
+      "side_effects": "internal_write",
+      "idempotent": true,
+      "compensation": "ops.budget.release",
+      "sla": {
+        "p50_ms": 60,
+        "p95_ms": 300,
+        "timeout_ms": 5000
+      },
+      "requires": {
+        "secrets": [
+          "MOS_STATE_URL",
+          "MOS_STATE_TOKEN"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/ops.budget.check.json",
+      "workflow": "dist/n8n/terminal/ops.budget.check.json",
+      "node_count": 16,
+      "extends": null
+    },
+    "ops.budget.release": {
+      "id": "ops.budget.release",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Release Budget Reservation",
+      "summary": "Compensation for ops.budget.check. Releases a reservation when the work it was reserved for did not happen. Without this, failed runs slowly starve a tenant of budget it never actually spent.",
+      "owner": "platform",
+      "maturity": "ga",
+      "capability_tags": [
+        "compensate.ops.budget"
+      ],
+      "side_effects": "external_write",
+      "idempotent": true,
+      "compensation": null,
+      "sla": {
+        "p50_ms": 800,
+        "p95_ms": 4000,
+        "timeout_ms": 30000
+      },
+      "retry": {
+        "max_attempts": 5,
+        "backoff": "exponential",
+        "base_ms": 2000
+      },
+      "requires": {
+        "secrets": [
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "observability": {
+        "slo": "99.9% — a compensation that fails leaves the system inconsistent, which is worse than the original failure"
+      },
+      "spec": "specs/terminal/ops.budget.release.json",
+      "workflow": "dist/n8n/terminal/ops.budget.release.json",
+      "node_count": 13,
+      "extends": null
+    },
+    "plan.brief.synthesize": {
+      "id": "plan.brief.synthesize",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Synthesise Canonical Brief",
+      "summary": "The hinge of the whole system. Free-form human intent plus the vertical profile in, a validated Brief out. Everything downstream reads the Brief and never the original message — which is exactly why one content factory can serve a plumber and a SaaS without branching.",
+      "owner": "strategy",
+      "maturity": "ga",
+      "capability_tags": [
+        "plan.brief"
+      ],
+      "input_schema": null,
+      "output_schema": "contracts/brief.schema.json",
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "anthropic",
+          "model": "claude-opus-5",
+          "tier": "frontier",
+          "cost_per_unit_minor": 4,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 6000,
+        "p95_ms": 20000,
+        "timeout_ms": 90000
+      },
+      "retry": {
+        "max_attempts": 2,
+        "backoff": "exponential",
+        "base_ms": 3000
+      },
+      "requires": {
+        "secrets": [
+          "ANTHROPIC_API_KEY",
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 4
+      },
+      "observability": {
+        "slo": "99.0% success over 7d",
+        "runbook": "docs/05-operations.md#brief-synthesis"
+      },
+      "spec": "specs/terminal/plan.brief.synthesize.json",
+      "workflow": "dist/n8n/terminal/plan.brief.synthesize.json",
+      "node_count": 24,
+      "extends": null
+    },
+    "plan.campaign.compose": {
+      "id": "plan.campaign.compose",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Compose Campaign Plan",
+      "summary": "Brief in, an executable DAG of capability TAGS out — plus a cost estimate before a cent is spent. Selects from the vertical's declared plays rather than inventing a pipeline, which is what keeps an autonomous planner inside a shape operators have agreed to.",
+      "owner": "strategy",
+      "maturity": "ga",
+      "capability_tags": [
+        "plan.campaign"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "anthropic",
+          "model": "claude-opus-5",
+          "tier": "frontier",
+          "cost_per_unit_minor": 5,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 7000,
+        "p95_ms": 25000,
+        "timeout_ms": 90000
+      },
+      "retry": {
+        "max_attempts": 2,
+        "backoff": "exponential",
+        "base_ms": 3000
+      },
+      "requires": {
+        "secrets": [
+          "ANTHROPIC_API_KEY",
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 5
+      },
+      "spec": "specs/terminal/plan.campaign.compose.json",
+      "workflow": "dist/n8n/terminal/plan.campaign.compose.json",
+      "node_count": 22,
+      "extends": null
+    },
+    "prompt.image.compose": {
+      "id": "prompt.image.compose",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Compose Image Prompts",
+      "summary": "Brief + vertical creative grammar in, structured image prompts out. Deliberately separate from generation: prompts are cheap to review, iterate and cache, while generations are not. The original screenshots coupled these two — splitting them is where most of the cost saving in this system lives.",
+      "owner": "visual",
+      "maturity": "ga",
+      "capability_tags": [
+        "produce.image.prompt"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "openai",
+          "model": "gpt-4.1-mini",
+          "tier": "small",
+          "cost_per_unit_minor": 1,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 3000,
+        "p95_ms": 10000,
+        "timeout_ms": 45000
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 1,
+        "variable_by": [
+          "variants"
+        ]
+      },
+      "spec": "specs/terminal/prompt.image.compose.json",
+      "workflow": "dist/n8n/terminal/prompt.image.compose.json",
+      "node_count": 17,
+      "extends": null
+    },
+    "prompt.image.compose.field_proof": {
+      "id": "prompt.image.compose.field_proof",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Compose Image Prompts — Field & Proof of Work",
+      "summary": "Bound by local services and industrial. There is no product shot: the proof is the work, the site and the person who did it. Polish actively reduces credibility here.",
+      "owner": "visual",
+      "maturity": "ga",
+      "capability_tags": [
+        "produce.image.prompt"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "openai",
+          "model": "gpt-4.1-mini",
+          "tier": "small",
+          "cost_per_unit_minor": 1,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 3000,
+        "p95_ms": 10000,
+        "timeout_ms": 45000
+      },
+      "verticals": [
+        "local_services",
+        "b2b_industrial"
+      ],
+      "cost_model": {
+        "estimate_minor_units": 1,
+        "variable_by": [
+          "variants"
+        ]
+      },
+      "spec": "specs/terminal/prompt.image.compose.field_proof.json",
+      "workflow": "dist/n8n/terminal/prompt.image.compose.field_proof.json",
+      "node_count": 17,
+      "extends": "prompt.image.compose"
+    },
+    "prompt.image.compose.lifestyle_room": {
+      "id": "prompt.image.compose.lifestyle_room",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Compose Image Prompts — Room & Interior",
+      "summary": "Bound by home_goods. Interiors fail on spatial logic long before they fail on style: wrong scale, impossible geometry and inconsistent light kill a frame that is otherwise beautiful.",
+      "owner": "visual",
+      "maturity": "ga",
+      "capability_tags": [
+        "produce.image.prompt"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "openai",
+          "model": "gpt-4.1-mini",
+          "tier": "small",
+          "cost_per_unit_minor": 1,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 3000,
+        "p95_ms": 10000,
+        "timeout_ms": 45000
+      },
+      "verticals": [
+        "home_goods"
+      ],
+      "cost_model": {
+        "estimate_minor_units": 1,
+        "variable_by": [
+          "variants"
+        ]
+      },
+      "spec": "specs/terminal/prompt.image.compose.lifestyle_room.json",
+      "workflow": "dist/n8n/terminal/prompt.image.compose.lifestyle_room.json",
+      "node_count": 17,
+      "extends": "prompt.image.compose"
+    },
+    "prompt.image.compose.product_studio": {
+      "id": "prompt.image.compose.product_studio",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Compose Image Prompts — Product Studio",
+      "summary": "Specialisation bound by e-commerce and home-goods profiles. A product must be unmistakable, correctly proportioned and the right colour; everything else is negotiable. Fifteen lines of override, not a forked workflow.",
+      "owner": "visual",
+      "maturity": "ga",
+      "capability_tags": [
+        "produce.image.prompt"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "openai",
+          "model": "gpt-4.1-mini",
+          "tier": "small",
+          "cost_per_unit_minor": 1,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 3000,
+        "p95_ms": 10000,
+        "timeout_ms": 45000
+      },
+      "verticals": [
+        "ecommerce_dtc",
+        "home_goods"
+      ],
+      "cost_model": {
+        "estimate_minor_units": 1,
+        "variable_by": [
+          "variants"
+        ]
+      },
+      "spec": "specs/terminal/prompt.image.compose.product_studio.json",
+      "workflow": "dist/n8n/terminal/prompt.image.compose.product_studio.json",
+      "node_count": 17,
+      "extends": "prompt.image.compose"
+    },
+    "prompt.image.compose.ui_abstract": {
+      "id": "prompt.image.compose.ui_abstract",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Compose Image Prompts — Abstract / Conceptual",
+      "summary": "Bound by B2B software and professional services. The product is invisible, so the image carries a concept. Legibility at thumbnail size beats detail every time.",
+      "owner": "visual",
+      "maturity": "ga",
+      "capability_tags": [
+        "produce.image.prompt"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "openai",
+          "model": "gpt-4.1-mini",
+          "tier": "small",
+          "cost_per_unit_minor": 1,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 3000,
+        "p95_ms": 10000,
+        "timeout_ms": 45000
+      },
+      "verticals": [
+        "b2b_saas",
+        "professional_services"
+      ],
+      "cost_model": {
+        "estimate_minor_units": 1,
+        "variable_by": [
+          "variants"
+        ]
+      },
+      "spec": "specs/terminal/prompt.image.compose.ui_abstract.json",
+      "workflow": "dist/n8n/terminal/prompt.image.compose.ui_abstract.json",
+      "node_count": 17,
+      "extends": "prompt.image.compose"
+    },
+    "research.product.fetch": {
+      "id": "research.product.fetch",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Fetch Product / Offer Data",
+      "summary": "Pulls first-party facts — catalogue attributes, spec sheets, reviews, CRM notes, usage data — from whatever system holds them. First-party data beats a model's recollection every time, and in regulated verticals it is the only acceptable source.",
+      "owner": "intelligence",
+      "maturity": "beta",
+      "capability_tags": [
+        "research.product"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 900,
+        "p95_ms": 4000,
+        "timeout_ms": 30000
+      },
+      "retry": {
+        "max_attempts": 3,
+        "backoff": "exponential",
+        "base_ms": 1500
+      },
+      "requires": {
+        "secrets": [
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/research.product.fetch.json",
+      "workflow": "dist/n8n/terminal/research.product.fetch.json",
+      "node_count": 20,
+      "extends": null
+    },
+    "research.web.search": {
+      "id": "research.web.search",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Web Research",
+      "summary": "Bounded external research with source capture. Returns findings WITH urls so downstream copy can cite rather than assert — the single cheapest defence against a confident, wrong, published claim.",
+      "owner": "intelligence",
+      "maturity": "ga",
+      "capability_tags": [
+        "research.market"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "tavily",
+          "tier": "small",
+          "cost_per_unit_minor": 1,
+          "unit": "call"
+        },
+        {
+          "name": "serper",
+          "tier": "small",
+          "cost_per_unit_minor": 1,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 2000,
+        "p95_ms": 8000,
+        "timeout_ms": 30000
+      },
+      "retry": {
+        "max_attempts": 3,
+        "backoff": "exponential",
+        "base_ms": 1500
+      },
+      "requires": {
+        "secrets": [
+          "TAVILY_API_KEY"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 1,
+        "variable_by": [
+          "max_results"
+        ]
+      },
+      "spec": "specs/terminal/research.web.search.json",
+      "workflow": "dist/n8n/terminal/research.web.search.json",
+      "node_count": 18,
+      "extends": null
+    },
+    "understand.intent.classify": {
+      "id": "understand.intent.classify",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Classify Intent",
+      "summary": "Cheap, fast, structured classification of an inbound message. Deliberately a nano-tier call: this runs on every message, and paying frontier prices to decide 'is this a question or a campaign' is how an estate's model bill quietly triples.",
+      "owner": "intake",
+      "maturity": "ga",
+      "capability_tags": [
+        "understand.classify"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "openai",
+          "model": "gpt-4.1-nano",
+          "tier": "nano",
+          "cost_per_unit_minor": 0.2,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 700,
+        "p95_ms": 3000,
+        "timeout_ms": 20000
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0.2
+      },
+      "spec": "specs/terminal/understand.intent.classify.json",
+      "workflow": "dist/n8n/terminal/understand.intent.classify.json",
+      "node_count": 16,
+      "extends": null
+    },
+    "verify.brand.score": {
+      "id": "verify.brand.score",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Brand Consistency Score",
+      "summary": "Scores copy and imagery against the tenant's brand config before anything is rendered or posted. Catching a wrong palette here costs a cent; catching it after a render costs the render, and after a post costs the brand.",
+      "owner": "governance",
+      "maturity": "beta",
+      "capability_tags": [
+        "verify.brand"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "tier": "small",
+          "cost_per_unit_minor": 1,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 2500,
+        "p95_ms": 9000,
+        "timeout_ms": 45000
+      },
+      "requires": {
+        "secrets": [
+          "ANTHROPIC_API_KEY",
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 1,
+        "variable_by": [
+          "variants"
+        ]
+      },
+      "spec": "specs/terminal/verify.brand.score.json",
+      "workflow": "dist/n8n/terminal/verify.brand.score.json",
+      "node_count": 18,
+      "extends": null
+    },
+    "verify.compliance.screen": {
+      "id": "verify.compliance.screen",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Compliance Screen",
+      "summary": "Deterministic lexicon and pattern rules first, a model only for what a list cannot judge. A `block` finding is terminal: no downstream unit may proceed, and the run parks for a human with the finding attached.",
+      "owner": "governance",
+      "maturity": "ga",
+      "capability_tags": [
+        "verify.compliance"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "tier": "small",
+          "cost_per_unit_minor": 1,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 1800,
+        "p95_ms": 7000,
+        "timeout_ms": 45000
+      },
+      "retry": {
+        "max_attempts": 2,
+        "backoff": "exponential",
+        "base_ms": 1500
+      },
+      "requires": {
+        "secrets": [
+          "ANTHROPIC_API_KEY",
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 1
+      },
+      "observability": {
+        "slo": "100% of publish-bound items screened",
+        "runbook": "docs/06-governance.md#compliance-screen"
+      },
+      "spec": "specs/terminal/verify.compliance.screen.json",
+      "workflow": "dist/n8n/terminal/verify.compliance.screen.json",
+      "node_count": 21,
+      "extends": null
+    },
+    "verify.compliance.screen.strict": {
+      "id": "verify.compliance.screen.strict",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Compliance Screen — Strict",
+      "summary": "Bound by regulated verticals. Escalates the judgement model, treats every `warn` as a hold, and requires a named human reviewer role. Same pipeline, stricter thresholds — the difference between regulated and unregulated is configuration, not a second codebase.",
+      "owner": "governance",
+      "maturity": "ga",
+      "capability_tags": [
+        "verify.compliance"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "providers": [
+        {
+          "name": "anthropic",
+          "model": "claude-sonnet-5",
+          "tier": "standard",
+          "cost_per_unit_minor": 3,
+          "unit": "call"
+        }
+      ],
+      "sla": {
+        "p50_ms": 1800,
+        "p95_ms": 7000,
+        "timeout_ms": 45000
+      },
+      "retry": {
+        "max_attempts": 2,
+        "backoff": "exponential",
+        "base_ms": 1500
+      },
+      "requires": {
+        "secrets": [
+          "ANTHROPIC_API_KEY",
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": [
+        "health_wellness"
+      ],
+      "cost_model": {
+        "estimate_minor_units": 1
+      },
+      "observability": {
+        "slo": "100% of publish-bound items screened",
+        "runbook": "docs/06-governance.md#compliance-screen"
+      },
+      "spec": "specs/terminal/verify.compliance.screen.strict.json",
+      "workflow": "dist/n8n/terminal/verify.compliance.screen.strict.json",
+      "node_count": 21,
+      "extends": "verify.compliance.screen"
+    },
+    "verify.rights.check": {
+      "id": "verify.rights.check",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "title": "Rights & Licensing Check",
+      "summary": "Verifies every asset bound for distribution has a known, unexpired licence covering the intended usage scope. Purely deterministic — no model judges a licence.",
+      "owner": "governance",
+      "maturity": "ga",
+      "capability_tags": [
+        "verify.rights"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 250,
+        "p95_ms": 1000,
+        "timeout_ms": 15000
+      },
+      "requires": {
+        "secrets": [
+          "MOS_STATE_URL"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/terminal/verify.rights.check.json",
+      "workflow": "dist/n8n/terminal/verify.rights.check.json",
+      "node_count": 14,
+      "extends": null
+    },
+    "sub.content": {
+      "id": "sub.content",
+      "version": "1.0.0",
+      "layer": "subsystem",
+      "title": "Content Factory",
+      "summary": "Brief in, channel-shaped copy out for every slot in the brief. Produces long-form once and shards it into channel-native short-form, which is why one research pass can feed a blog, five LinkedIn posts and an email without re-researching or contradicting itself.",
+      "owner": "content",
+      "maturity": "ga",
+      "capability_tags": [
+        "subsystem.content"
+      ],
+      "side_effects": "none",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 25000,
+        "p95_ms": 80000,
+        "timeout_ms": 240000
+      },
+      "requires": {
+        "capabilities": [
+          "research.web.search",
+          "copy.longform.generate",
+          "copy.short.generate",
+          "copy.localize"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 12,
+        "variable_by": [
+          "channels",
+          "variants",
+          "locales"
+        ]
+      },
+      "spec": "specs/subsystems/sub.content.json",
+      "workflow": "dist/n8n/subsystems/sub.content.json",
+      "node_count": 29,
+      "extends": null
+    },
+    "sub.distribution": {
+      "id": "sub.distribution",
+      "version": "1.0.0",
+      "layer": "subsystem",
+      "title": "Distribution & Scheduling",
+      "summary": "Takes cleared creative and gets it out, one channel-neutral PublishRequest per slot, routed to the right adapter and paced by the queue. Adding a channel to the entire estate is one adapter plus one registry entry.",
+      "owner": "distribution",
+      "maturity": "ga",
+      "capability_tags": [
+        "subsystem.distribution"
+      ],
+      "side_effects": "publish",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 4000,
+        "p95_ms": 15000,
+        "timeout_ms": 120000
+      },
+      "requires": {
+        "capabilities": [
+          "dist.schedule.enqueue",
+          "dist.publish.telegram",
+          "dist.publish.linkedin",
+          "dist.publish.blog",
+          "asset.ledger.append"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0,
+        "variable_by": [
+          "channels"
+        ]
+      },
+      "spec": "specs/subsystems/sub.distribution.json",
+      "workflow": "dist/n8n/subsystems/sub.distribution.json",
+      "node_count": 29,
+      "extends": null
+    },
+    "sub.governance": {
+      "id": "sub.governance",
+      "version": "1.0.0",
+      "layer": "subsystem",
+      "title": "Brand & Compliance Governance",
+      "summary": "The gate every publish-bound item passes through. Runs the cheap deterministic checks first, escalates only what needs judgement, and decides — from policy, not from the caller's optimism — whether a human sees this before the public does.",
+      "owner": "governance",
+      "maturity": "ga",
+      "capability_tags": [
+        "subsystem.governance"
+      ],
+      "side_effects": "external_write",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 6000,
+        "p95_ms": 20000,
+        "timeout_ms": 86400000,
+        "async": true
+      },
+      "requires": {
+        "capabilities": [
+          "verify.rights.check",
+          "verify.brand.score",
+          "verify.compliance.screen",
+          "approve.human.request"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 3
+      },
+      "observability": {
+        "slo": "100% of publish-bound items pass through this subsystem",
+        "runbook": "docs/06-governance.md"
+      },
+      "spec": "specs/subsystems/sub.governance.json",
+      "workflow": "dist/n8n/subsystems/sub.governance.json",
+      "node_count": 31,
+      "extends": null
+    },
+    "sub.intake": {
+      "id": "sub.intake",
+      "version": "1.0.0",
+      "layer": "subsystem",
+      "title": "Intake & Understanding",
+      "summary": "Turns anything a human or a system sends into a validated Brief. Owns modality handling, PII redaction, intent classification and the clarification loop. Everything after this point in the estate reads a Brief and never a raw message.",
+      "owner": "intake",
+      "maturity": "ga",
+      "capability_tags": [
+        "subsystem.intake"
+      ],
+      "output_schema": "contracts/brief.schema.json",
+      "side_effects": "external_write",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 9000,
+        "p95_ms": 30000,
+        "timeout_ms": 120000
+      },
+      "requires": {
+        "capabilities": [
+          "intake.message.normalize",
+          "intake.audio.transcribe",
+          "understand.intent.classify",
+          "plan.brief.synthesize",
+          "intake.clarification.request"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 6
+      },
+      "observability": {
+        "slo": "98% of inbound messages reach a Brief or a clarification within 60s"
+      },
+      "spec": "specs/subsystems/sub.intake.json",
+      "workflow": "dist/n8n/subsystems/sub.intake.json",
+      "node_count": 32,
+      "extends": null
+    },
+    "sub.measurement": {
+      "id": "sub.measurement",
+      "version": "1.0.0",
+      "layer": "subsystem",
+      "title": "Measurement & Learning",
+      "summary": "Closes the loop. Collects metrics, normalises them across channels, scores creative against the vertical's own benchmarks, and proposes — never silently applies — profile adjustments. Without this the system is a content printer; with it, it compounds.",
+      "owner": "measurement",
+      "maturity": "beta",
+      "capability_tags": [
+        "subsystem.measurement"
+      ],
+      "side_effects": "internal_write",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 15000,
+        "p95_ms": 60000,
+        "timeout_ms": 300000
+      },
+      "requires": {
+        "capabilities": [
+          "measure.metrics.collect",
+          "measure.creative.score",
+          "learn.playbook.update"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 3
+      },
+      "spec": "specs/subsystems/sub.measurement.json",
+      "workflow": "dist/n8n/subsystems/sub.measurement.json",
+      "node_count": 23,
+      "extends": null
+    },
+    "sub.motion": {
+      "id": "sub.motion",
+      "version": "1.0.0",
+      "layer": "subsystem",
+      "title": "Motion Factory",
+      "summary": "The second screenshot, decomposed. Script to finished video: beats, keyframes, clips, voiceover, captions and render — every stage independently retryable, independently costed, and degradable to a still when a clip fails.",
+      "owner": "motion",
+      "maturity": "ga",
+      "capability_tags": [
+        "subsystem.motion"
+      ],
+      "side_effects": "spend",
+      "idempotent": true,
+      "compensation": "asset.store.delete",
+      "sla": {
+        "p50_ms": 180000,
+        "p95_ms": 480000,
+        "timeout_ms": 900000,
+        "async": true
+      },
+      "requires": {
+        "capabilities": [
+          "copy.script.generate",
+          "prompt.image.compose",
+          "media.image.generate",
+          "media.video.clip.generate",
+          "media.audio.vo.generate",
+          "media.captions.generate",
+          "media.video.render",
+          "asset.ledger.append"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 400,
+        "variable_by": [
+          "duration_s",
+          "variants"
+        ]
+      },
+      "observability": {
+        "slo": "95% of renders complete within 8 minutes"
+      },
+      "spec": "specs/subsystems/sub.motion.json",
+      "workflow": "dist/n8n/subsystems/sub.motion.json",
+      "node_count": 35,
+      "extends": null
+    },
+    "sub.visual": {
+      "id": "sub.visual",
+      "version": "1.0.0",
+      "layer": "subsystem",
+      "title": "Visual Factory",
+      "summary": "Brief in, reviewed imagery out. Owns the reuse-before-generate decision, prompt composition (routed per vertical), generation with fallback, and brand scoring before anything expensive happens downstream.",
+      "owner": "visual",
+      "maturity": "ga",
+      "capability_tags": [
+        "subsystem.visual"
+      ],
+      "side_effects": "spend",
+      "idempotent": true,
+      "compensation": "asset.store.delete",
+      "sla": {
+        "p50_ms": 20000,
+        "p95_ms": 70000,
+        "timeout_ms": 300000
+      },
+      "requires": {
+        "capabilities": [
+          "media.image.search",
+          "prompt.image.compose",
+          "media.image.generate",
+          "media.image.edit",
+          "verify.brand.score",
+          "asset.store.put"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 16,
+        "variable_by": [
+          "variants"
+        ]
+      },
+      "spec": "specs/subsystems/sub.visual.json",
+      "workflow": "dist/n8n/subsystems/sub.visual.json",
+      "node_count": 29,
+      "extends": null
+    },
+    "sys.gateway": {
+      "id": "sys.gateway",
+      "version": "1.0.0",
+      "layer": "system",
+      "title": "Omni-channel Gateway",
+      "summary": "Every way work enters the system, in one place: a human messaging a bot, a webhook from a CRM or e-commerce platform, a schedule, or a direct API call. Its only jobs are to authenticate the source, mint a correctly-scoped Envelope, and hand off. It contains no marketing logic at all — that separation is why adding an intake channel never risks a production pipeline.",
+      "owner": "platform",
+      "maturity": "ga",
+      "capability_tags": [
+        "system.gateway"
+      ],
+      "side_effects": "external_write",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 300,
+        "p95_ms": 1500,
+        "timeout_ms": 30000
+      },
+      "requires": {
+        "secrets": [
+          "TELEGRAM_BOT_TOKEN",
+          "MOS_STATE_URL"
+        ],
+        "capabilities": [
+          "sys.orchestrator"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 0
+      },
+      "spec": "specs/system/sys.gateway.json",
+      "workflow": "dist/n8n/system/sys.gateway.json",
+      "node_count": 23,
+      "extends": null
+    },
+    "sys.orchestrator": {
+      "id": "sys.orchestrator",
+      "version": "1.0.0",
+      "layer": "system",
+      "title": "Campaign Orchestrator",
+      "summary": "The loop: understand, plan, execute, verify, distribute, measure. It knows about capability TAGS and subsystems; it knows nothing about providers, platforms or verticals. Every branch it takes is a recorded decision, and every step it runs is late-bound through the router — which is what lets the same orchestrator run a plumber's job-of-the-week and an enterprise product launch without modification.",
+      "owner": "platform",
+      "maturity": "ga",
+      "capability_tags": [
+        "system.orchestrate"
+      ],
+      "side_effects": "publish",
+      "idempotent": true,
+      "sla": {
+        "p50_ms": 120000,
+        "p95_ms": 600000,
+        "timeout_ms": 1800000,
+        "async": true
+      },
+      "requires": {
+        "capabilities": [
+          "sub.intake",
+          "plan.campaign.compose",
+          "ops.budget.check",
+          "sub.content",
+          "sub.visual",
+          "sub.motion",
+          "sub.governance",
+          "sub.distribution",
+          "asset.ledger.append"
+        ]
+      },
+      "verticals": "*",
+      "cost_model": {
+        "estimate_minor_units": 60,
+        "variable_by": [
+          "play",
+          "channels",
+          "variants"
+        ]
+      },
+      "observability": {
+        "slo": "95% of runs reach a terminal state (published, parked or declined) within their deadline",
+        "runbook": "docs/05-operations.md#orchestrator"
+      },
+      "spec": "specs/system/sys.orchestrator.json",
+      "workflow": "dist/n8n/system/sys.orchestrator.json",
+      "node_count": 49,
+      "extends": null
+    }
+  }
+}

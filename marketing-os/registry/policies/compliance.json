@@ -1,0 +1,91 @@
+{
+  "id": "mos.compliance",
+  "version": "1.0.0",
+  "description": "Compliance as profiles, not as if-statements buried in prompts. A vertical names a profile; the screening terminal loads it. Regulated industries get real gates without every other vertical paying for them.",
+  "profiles": {
+    "none": { "title": "Off", "rules": [], "review_mode": "none", "note": "Internal experiments only. Never valid for a `publish` side-effect in production." },
+
+    "standard": {
+      "title": "Standard commercial speech",
+      "review_mode": "sampled",
+      "sample_rate": 0.1,
+      "rules": [
+        { "id": "STD-01", "severity": "block", "test": "absolute_claim", "detail": "Unqualified absolutes ('guaranteed', 'never fails', '#1') require substantiation attached to the claim." },
+        { "id": "STD-02", "severity": "block", "test": "competitor_disparagement" },
+        { "id": "STD-03", "severity": "warn", "test": "unsubstantiated_statistic", "detail": "A number without a cited source." },
+        { "id": "STD-04", "severity": "block", "test": "fake_scarcity", "detail": "Countdown or stock-level language not backed by a real constraint." },
+        { "id": "STD-05", "severity": "block", "test": "impersonation", "detail": "Copy or imagery implying endorsement by a real person or brand without a release on file." },
+        { "id": "STD-06", "severity": "warn", "test": "ai_disclosure", "detail": "Synthetic human likeness should be disclosed where the platform requires it." }
+      ]
+    },
+
+    "regulated_health": {
+      "title": "Health, wellness, supplements, clinical",
+      "extends": "standard",
+      "review_mode": "always",
+      "autonomy_ceiling": "publish_with_approval",
+      "rules": [
+        { "id": "HLT-01", "severity": "block", "test": "disease_claim", "detail": "No diagnose/treat/cure/prevent language for a non-approved product." },
+        { "id": "HLT-02", "severity": "block", "test": "outcome_guarantee" },
+        { "id": "HLT-03", "severity": "block", "test": "before_after_without_disclaimer", "detail": "Results-vary disclaimer required and must be legible in-frame, not only in the caption." },
+        { "id": "HLT-04", "severity": "block", "test": "patient_testimonial_without_release" },
+        { "id": "HLT-05", "severity": "warn", "test": "medical_persona", "detail": "Imagery implying clinical authority (white coat, stethoscope) without credentials." }
+      ],
+      "required_disclaimers": [{ "when": "any_health_claim", "text": "These statements have not been evaluated by the FDA. This product is not intended to diagnose, treat, cure, or prevent any disease.", "placement": "in_creative_and_caption" }]
+    },
+
+    "regulated_finance": {
+      "title": "Financial products and advice",
+      "extends": "standard",
+      "review_mode": "always",
+      "autonomy_ceiling": "draft",
+      "rules": [
+        { "id": "FIN-01", "severity": "block", "test": "return_projection" },
+        { "id": "FIN-02", "severity": "block", "test": "risk_omission" },
+        { "id": "FIN-03", "severity": "block", "test": "past_performance_without_disclaimer" },
+        { "id": "FIN-04", "severity": "block", "test": "advice_without_licence_statement" }
+      ],
+      "required_disclaimers": [{ "when": "any_performance_reference", "text": "Past performance is not indicative of future results.", "placement": "in_creative_and_caption" }]
+    },
+
+    "regulated_housing_credit_employment": {
+      "title": "Protected-class targeting (housing, credit, employment)",
+      "extends": "standard",
+      "review_mode": "always",
+      "rules": [
+        { "id": "PCT-01", "severity": "block", "test": "protected_class_targeting", "detail": "Audience or copy that segments on a protected class. Applies to real estate, lending, hiring and any tenancy offer." },
+        { "id": "PCT-02", "severity": "block", "test": "exclusionary_language" }
+      ]
+    },
+
+    "local_services": {
+      "title": "Licensed trades and local services",
+      "extends": "standard",
+      "review_mode": "sampled",
+      "rules": [
+        { "id": "LOC-01", "severity": "block", "test": "licence_number_required", "detail": "Jurisdictions requiring a contractor/licence number in advertising must have it rendered in the creative." },
+        { "id": "LOC-02", "severity": "warn", "test": "pricing_without_conditions", "detail": "'From $X' needs the conditions that make $X real." },
+        { "id": "LOC-03", "severity": "block", "test": "service_area_mismatch", "detail": "Never advertise a service area the tenant does not cover." }
+      ]
+    },
+
+    "alcohol_age_restricted": {
+      "title": "Age-restricted goods",
+      "extends": "standard",
+      "review_mode": "always",
+      "rules": [
+        { "id": "AGE-01", "severity": "block", "test": "underage_depiction" },
+        { "id": "AGE-02", "severity": "block", "test": "consumption_incentive" },
+        { "id": "AGE-03", "severity": "block", "test": "missing_age_gate" }
+      ]
+    }
+  },
+
+  "enforcement": {
+    "order": ["deterministic_lexicon", "pattern_rules", "model_screen", "human_review"],
+    "note": "Cheap and certain first. A banned-term list catches most of it for free; the model only judges what a list cannot. A `block` finding is terminal — no downstream unit may proceed past it, and the run is parked for a human with the finding attached.",
+    "on_block": "park_for_human",
+    "on_warn": "annotate_and_continue",
+    "record": "every finding is written to the decision ledger with rule_id, whether or not it blocked"
+  }
+}

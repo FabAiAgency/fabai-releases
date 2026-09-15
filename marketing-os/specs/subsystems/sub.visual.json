@@ -1,0 +1,51 @@
+{
+  "capability": {
+    "id": "sub.visual",
+    "version": "1.0.0",
+    "layer": "subsystem",
+    "title": "Visual Factory",
+    "summary": "Brief in, reviewed imagery out. Owns the reuse-before-generate decision, prompt composition (routed per vertical), generation with fallback, and brand scoring before anything expensive happens downstream.",
+    "owner": "visual",
+    "maturity": "ga",
+    "capability_tags": ["subsystem.visual"],
+    "side_effects": "spend",
+    "idempotent": true,
+    "compensation": "asset.store.delete",
+    "sla": { "p50_ms": 20000, "p95_ms": 70000, "timeout_ms": 300000 },
+    "requires": { "capabilities": ["media.image.search", "prompt.image.compose", "media.image.generate", "media.image.edit", "verify.brand.score", "asset.store.put"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 16, "variable_by": ["variants"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "search", "kind": "call", "title": "Search Library First", "group": "Reuse",
+        "with": { "capability": "media.image.search",
+          "note": "Always. Even when the brief says generate_first, the search result is recorded so the cost of NOT reusing is visible in the ledger." } },
+      { "id": "reuse_gate", "kind": "if", "title": "Reuse?", "group": "Reuse",
+        "with": { "condition": "={{ $json.decision === 'reuse' && $('Envelope In').first().json.payload.brief.assets?.source_preference !== 'generate_only' }}" },
+        "next": { "true": "adapt", "false": "route_prompt" } },
+      { "id": "adapt", "kind": "call", "title": "Adapt Existing Asset", "group": "Reuse",
+        "with": { "capability": "media.image.edit", "payload": { "op": "variant", "source_uri": "={{ $json.candidates[0].uri }}", "source_asset_id": "={{ $json.candidates[0].asset_id }}" } },
+        "next": "brand" },
+      { "id": "route_prompt", "kind": "route", "title": "Route Prompt Composer", "group": "Generate",
+        "with": { "tag": "produce.image.prompt",
+          "note": "This is mechanism (b) in action: the vertical profile's capability_bindings decide whether a product-studio, room, abstract or field-proof composer runs. No branch in this workflow names a vertical." } },
+      { "id": "compose", "kind": "call", "title": "Compose Prompts", "group": "Generate",
+        "with": { "capability": "={{ $json.resolved_capability }}", "mode": "dynamic" } },
+      { "id": "split", "next": "generate", "kind": "splitOut", "title": "Per Prompt", "group": "Generate", "with": { "field": "prompts" } },
+      { "id": "generate", "next": "brand", "kind": "call", "title": "Generate Image", "group": "Generate",
+        "with": { "capability": "media.image.generate", "mode": "each" } },
+      { "id": "brand", "kind": "call", "title": "Brand Score", "group": "Review",
+        "with": { "capability": "verify.brand.score" } },
+      { "id": "brand_gate", "kind": "if", "title": "On Brand?", "group": "Review",
+        "with": { "condition": "={{ $json.status !== 'fail' }}" },
+        "next": { "true": "collect", "false": "regenerate_once" } },
+      { "id": "regenerate_once", "kind": "code", "title": "One Corrective Pass", "group": "Review",
+        "with": { "code": "// Exactly one corrective regeneration, with the violations fed back into the prompt.\n// Unbounded retry loops against a subjective scorer are how a system burns a budget overnight.\nconst attempt = $('Envelope In').first().json.payload._brand_attempt || 0;\nif (attempt >= 1) {\n  return [{ json: { give_up: true, status: 'warn', reason: 'brand_floor_not_met_after_one_correction', escalate_to_human: true } }];\n}\nconst v = ($json.violations || []).map(x => `${x.rule}: ${x.fix}`).join('; ');\nreturn [{ json: { _brand_attempt: attempt + 1, prompt_suffix: `\\n\\nBrand corrections required: ${v}` } }];" },
+        "next": "generate" },
+      { "id": "collect", "kind": "code", "title": "Collect Assets", "group": "Review",
+        "with": { "code": "const items = $input.all().map(i => i.json);\nreturn [{ json: {\n  assets: items.filter(a => a.asset_id),\n  usable: items.filter(a => a.asset_id && a.status !== 'fail').length,\n  escalations: items.filter(a => a.escalate_to_human),\n  reused: items.filter(a => a.deduped || a.reused).length\n} }];" } }
+    ]
+  }
+}

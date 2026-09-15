@@ -1,0 +1,26 @@
+{
+  "extends": "media.video.render",
+  "capability": {
+    "id": "media.video.render.ugc_vertical",
+    "version": "1.0.0",
+    "title": "Render Video — UGC Vertical",
+    "summary": "Bound by e-commerce and any 9:16 slot. Hard cuts, oversized captions in the safe area, product held high in frame, offer end-card. A different FILM, not a different pipeline.",
+    "capability_tags": ["assemble.video"],
+    "verticals": ["ecommerce_dtc", "home_goods"],
+    "side_effects": "spend",
+    "idempotent": true,
+    "compensation": "asset.store.delete"
+  },
+  "overrides": {
+    "timeline": {
+      "template": {
+        "aspect_ratio": "9:16",
+        "caption_style": { "font_family": "Inter", "font_weight": "800", "font_size": "7vh", "fill_color": "#FFFFFF", "stroke_color": "#000000", "stroke_width": "0.4vh", "y": "72%", "x_alignment": "50%", "max_width": "84%" },
+        "transitions": "hard_cut",
+        "music_volume": 0.08,
+        "end_card": "brand_offer_card_vertical",
+        "safe_area_note": "Captions sit at 72% height: above the platform UI on TikTok and Reels, below the product. Anything lower is covered by the caption tray on a real device."
+      }
+    }
+  }
+}

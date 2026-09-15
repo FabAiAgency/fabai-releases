@@ -1,0 +1,24 @@
+{
+  "capability": {
+    "id": "media.captions.generate",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Generate Captions",
+    "summary": "Burned-in caption cues from voiceover timings or a transcript. Not decoration: most short-form video is watched with sound off, and every major platform ranks accessible content higher.",
+    "owner": "motion",
+    "maturity": "ga",
+    "capability_tags": ["produce.captions"],
+    "side_effects": "none",
+    "idempotent": true,
+    "sla": { "p50_ms": 200, "p95_ms": 900, "timeout_ms": 15000 },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "cues", "kind": "code", "title": "Build Cues", "group": "Captions",
+        "with": { "code": "// Cue grouping rules that survive contact with real phones: never more than 3 words on a\n// line for vertical video, never longer than 1.6s on screen, never split a number from its unit.\nconst p = $json.payload;\nconst words = p.words || [];\nconst maxWords = p.max_words_per_cue || (p.aspect_ratio === '9:16' ? 3 : 6);\nconst maxDur = p.max_cue_duration_s || 1.6;\nconst cues = [];\nlet buf = [];\nconst flush = () => { if (!buf.length) return; cues.push({ text: buf.map(w => w.word).join(' '), start_s: buf[0].start_s, end_s: buf[buf.length - 1].end_s }); buf = []; };\nfor (const w of words) {\n  buf.push(w);\n  const dur = buf[buf.length - 1].end_s - buf[0].start_s;\n  if (buf.length >= maxWords || dur >= maxDur) flush();\n}\nflush();\nreturn [{ json: {\n  cues,\n  cue_count: cues.length,\n  style: { position: p.aspect_ratio === '9:16' ? 'lower_third_safe' : 'bottom_center', weight: 'bold', stroke: true, background: 'semi_opaque', max_width_pct: 80 },\n  srt: cues.map((c, i) => `${i + 1}\\n${new Date(c.start_s * 1000).toISOString().substr(11, 12).replace('.', ',')} --> ${new Date(c.end_s * 1000).toISOString().substr(11, 12).replace('.', ',')}\\n${c.text}\\n`).join('\\n')\n} }];" } }
+    ]
+  }
+}

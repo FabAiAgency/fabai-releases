@@ -1,0 +1,796 @@
+{
+  "name": "[subsystem] Distribution & Scheduling",
+  "nodes": [
+    {
+      "id": "n_0025",
+      "name": "Frame · Envelope In",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        490,
+        170
+      ],
+      "parameters": {
+        "content": "## Envelope In",
+        "height": 330,
+        "width": 700,
+        "color": 5
+      }
+    },
+    {
+      "id": "n_0026",
+      "name": "Frame · Guard",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1170,
+        170
+      ],
+      "parameters": {
+        "content": "## Guard",
+        "height": 330,
+        "width": 1040,
+        "color": 6
+      }
+    },
+    {
+      "id": "n_0027",
+      "name": "Frame · Fan Out##0",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1850,
+        170
+      ],
+      "parameters": {
+        "content": "## Fan Out",
+        "height": 530,
+        "width": 1040,
+        "color": 7
+      }
+    },
+    {
+      "id": "n_0028",
+      "name": "Frame · Fan Out##1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2870,
+        370
+      ],
+      "parameters": {
+        "content": "## Fan Out",
+        "height": 330,
+        "width": 360,
+        "color": 2
+      }
+    },
+    {
+      "id": "n_0029",
+      "name": "Frame · Publish##0",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2870,
+        170
+      ],
+      "parameters": {
+        "content": "## Publish",
+        "height": 330,
+        "width": 360,
+        "color": 1
+      }
+    },
+    {
+      "id": "n_0030",
+      "name": "Frame · Publish##1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        890
+      ],
+      "parameters": {
+        "content": "## Publish",
+        "height": 330,
+        "width": 1040,
+        "color": 4
+      }
+    },
+    {
+      "id": "n_0031",
+      "name": "Frame · Log",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1170,
+        890
+      ],
+      "parameters": {
+        "content": "## Log",
+        "height": 330,
+        "width": 360,
+        "color": 5
+      }
+    },
+    {
+      "id": "n_0032",
+      "name": "Frame · Telemetry Out",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        1090
+      ],
+      "parameters": {
+        "content": "## Telemetry Out",
+        "height": 330,
+        "width": 700,
+        "color": 6
+      }
+    },
+    {
+      "id": "n_0033",
+      "name": "Frame · Error & DLQ",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        1530
+      ],
+      "parameters": {
+        "content": "## Error & DLQ",
+        "height": 330,
+        "width": 1040,
+        "color": 3
+      }
+    },
+    {
+      "id": "n_0017",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "n_0018",
+      "name": "Envelope In",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED preamble — every unit in the estate starts here, identically.\n// Rejects an envelope whose MAJOR version this unit does not implement, rather than\n// half-processing a shape it does not understand.\nconst SUPPORTED_MAJOR = 1;\nconst raw = $json.envelope ?? $json;\nconst v = String(raw.envelope_version ?? '0.0.0');\nif (Number(v.split('.')[0]) !== SUPPORTED_MAJOR) {\n  throw new Error('VALIDATION_FAILED: envelope_version ' + v + ' is not supported by sub.distribution@1.0.0 (needs ' + SUPPORTED_MAJOR + '.x)');\n}\nfor (const f of ['trace_id', 'tenant_id', 'idempotency_key']) {\n  if (!raw[f]) throw new Error('VALIDATION_FAILED: envelope.' + f + ' is required');\n}\nif (raw.deadline_at && Date.parse(raw.deadline_at) < Date.now()) {\n  // Fail fast rather than start work that cannot finish in time.\n  throw new Error('TIMEOUT: deadline_at ' + raw.deadline_at + ' already passed before sub.distribution started');\n}\nreturn [{ json: {\n  ...raw,\n  span_id: 'spn_' + Math.random().toString(36).slice(2, 10),\n  parent_span_id: raw.span_id ?? null,\n  policy: raw.policy ?? {},\n  budget: raw.budget ?? {},\n  provenance: raw.provenance ?? [],\n  _started_at: Date.now(),\n  _capability: \"sub.distribution\",\n  _capability_version: \"1.0.0\"\n} }];"
+      }
+    },
+    {
+      "id": "n_0019",
+      "name": "Span Start",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED telemetry — span_start.\nconst e = $json;\nreturn [{ json: { ...e, _telemetry: {\n  event_id: 'evt_' + Math.random().toString(36).slice(2, 12),\n  trace_id: e.trace_id, span_id: e.span_id, parent_span_id: e.parent_span_id,\n  tenant_id: e.tenant_id, brand_id: e.brand_id ?? null, vertical: e.vertical ?? null,\n  capability: \"sub.distribution\", capability_version: \"1.0.0\",\n  layer: \"subsystem\", stage: e.stage ?? null,\n  event: 'span_start', at: new Date().toISOString()\n} } }];"
+      }
+    },
+    {
+      "id": "n_0001",
+      "name": "Governance Cleared?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED gate. Re-verifies what an upstream subsystem already checked.\n// Cheap, and it makes a mis-wired caller fail CLOSED rather than publish.\nconst CHECKS = [\"approval\",\"compliance\",\"brand\",\"rights\"];\nconst env = $('Envelope In').first().json;\nconst gates = { ...(env.payload?.gates ?? {}), ...($json.gates ?? {}) };\nconst PASS = { compliance: ['pass', 'warn'], brand: ['pass', 'warn'], rights: ['pass'], approval: ['approved', 'not_required'] };\nconst failed = [];\nfor (const c of CHECKS) {\n  const v = gates[c] ?? (c === 'approval' ? gates.human_approval : undefined);\n  if (v === undefined) { failed.push({ check: c, reason: 'not_evaluated' }); continue; }\n  if (!(PASS[c] ?? ['pass']).includes(v)) failed.push({ check: c, reason: 'status_' + v });\n}\nreturn [{ json: { ...$json, gate_pass: failed.length === 0, gate_failures: failed } }];"
+      }
+    },
+    {
+      "id": "n_0003",
+      "name": "Governance Cleared? · Pass?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1600,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c_0002",
+              "leftValue": "={{ $json.gate_pass === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "n_0004",
+      "name": "Governance Cleared? · Blocked",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1940,
+        300
+      ],
+      "parameters": {
+        "errorMessage": "=POLICY_BLOCKED: {{ JSON.stringify($json.gate_failures) }}"
+      }
+    },
+    {
+      "id": "n_0005",
+      "name": "Build Publish Requests",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1940,
+        500
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// One PublishRequest per channel slot, with a deterministic idempotency key so a replayed\n// run cannot double-post. The key is the whole reason a retry is safe here.\nconst crypto = require('crypto');\nconst e = $('Envelope In').first().json;\nconst p = e.payload;\nconst reqs = (p.slots || []).map((slot, i) => {\n  const content = (p.copy || []).find(c => c.slot?.channel === slot.channel && c.slot?.format === slot.format) || (p.copy || [])[i] || {};\n  const assets = (p.assets || []).filter(a => !a.channel_fit || a.channel_fit.includes(slot.channel));\n  const body = [content.hook, content.body].filter(Boolean).join('\\n\\n');\n  const key = crypto.createHash('sha256').update([e.tenant_id, slot.channel, slot.format, body, assets.map(a => a.asset_id).join(',')].join('|')).digest('hex');\n  return {\n    request_id: 'pub_' + key.slice(0, 16),\n    tenant_id: e.tenant_id,\n    brand_id: e.brand_id,\n    trace_id: e.trace_id,\n    channel: slot.channel,\n    format: slot.format,\n    account_ref: p.accounts?.[slot.channel] || null,\n    content: { title: content.title || null, body, caption: content.caption || content.body || null, hashtags: content.hashtags || [], link: content.link || null, alt_text: content.alt_text || null, first_comment: content.first_comment || null, asset_ids: assets.map(a => a.asset_id), asset_urls: assets.map(a => a.public_url) },\n    schedule: p.schedule || { mode: 'now' },\n    gates: p.gates || {},\n    idempotency_key: key,\n    dry_run: p.dry_run === true\n  };\n});\nreturn reqs.map(r => ({ json: r }));"
+      }
+    },
+    {
+      "id": "n_0006",
+      "name": "Enqueue / Pace",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2280,
+        300
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "dist.schedule.enqueue",
+          "mode": "id",
+          "cachedResultName": "dist.schedule.enqueue"
+        },
+        "mode": "each",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envelope": "={{ $json }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "n_0008",
+      "name": "Due Now?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2620,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c_0007",
+              "leftValue": "={{ $json.mode === 'now' && $json.slot_at_or_before_now !== false }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "n_0009",
+      "name": "Route to Adapter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2960,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED by compiler/router.mjs — do not edit in the n8n canvas.\n// Resolves the abstract capability tag \"distribute.publish\" to a concrete implementation.\n// Precedence: hard_rule -> vertical_binding -> policy_table -> model -> default\nconst TAG = \"distribute.publish\";\nconst POLICY = {\n  \"precedence\": [\n    \"hard_rule\",\n    \"vertical_binding\",\n    \"policy_table\",\n    \"model\",\n    \"default\"\n  ],\n  \"hard_rules\": [\n    {\n      \"id\": \"HR-001-regulated-claim-requires-human\",\n      \"description\": \"Any claim tagged `regulated` (health outcome, financial return, legal result, efficacy) goes to a human before it can reach the public, regardless of tenant autonomy setting.\",\n      \"when\": {\n        \"brief.message.key_claims[].risk\": {\n          \"any_of\": [\n            \"regulated\"\n          ]\n        }\n      },\n      \"then\": {\n        \"action\": \"require_approval\",\n        \"reason_code\": \"REGULATED_CLAIM\",\n        \"message\": \"Regulated claim detected; human sign-off required before distribution.\"\n      },\n      \"severity\": \"block\"\n    },\n    {\n      \"id\": \"HR-002-paid-media-always-approved\",\n      \"description\": \"Paid channels spend money per impression. Never autonomous.\",\n      \"when\": {\n        \"context.channel_kind\": {\n          \"eq\": \"paid\"\n        }\n      },\n      \"then\": {\n        \"action\": \"require_approval\",\n        \"reason_code\": \"PAID_MEDIA\"\n      },\n      \"severity\": \"block\"\n    },\n    {\n      \"id\": \"HR-003-unknown-rights-cannot-publish\",\n      \"description\": \"An asset whose licence is unknown or expired is never distributed. This is the rule that keeps an autonomous system out of court.\",\n      \"when\": {\n        \"context.asset_rights\": {\n          \"in\": [\n            \"unknown\",\n            \"expired\"\n          ]\n        }\n      },\n      \"then\": {\n        \"action\": \"veto\",\n        \"reason_code\": \"RIGHTS_UNVERIFIED\",\n        \"message\": \"Asset rights unverified — blocked before distribution.\"\n      },\n      \"severity\": \"block\"\n    },\n    {\n      \"id\": \"HR-004-budget-exhausted\",\n      \"when\": {\n        \"envelope.budget.spent_minor_units\": {\n          \"gte\": \"@envelope.budget.cap_minor_units\"\n        }\n      },\n      \"then\": {\n        \"action\": \"veto\",\n        \"reason_code\": \"BUDGET_EXCEEDED\"\n      },\n      \"severity\": \"block\"\n    },\n    {\n      \"id\": \"HR-005-residency-pins-provider\",\n      \"description\": \"EU/UK residency forces in-region providers even when a cheaper chain exists.\",\n      \"when\": {\n        \"envelope.policy.data_residency\": {\n          \"in\": [\n            \"eu\",\n            \"uk\"\n          ]\n        }\n      },\n      \"then\": {\n        \"action\": \"force_provider\",\n        \"reason_code\": \"DATA_RESIDENCY\"\n      },\n      \"severity\": \"block\"\n    },\n    {\n      \"id\": \"HR-006-low-confidence-brief-asks\",\n      \"description\": \"The system asks rather than invents. A half-understood voice note becomes a question, not a campaign.\",\n      \"when\": {\n        \"brief.confidence\": {\n          \"lt\": 0.55\n        }\n      },\n      \"then\": {\n        \"action\": \"bind\",\n        \"capability\": \"intake.clarification.request\",\n        \"reason_code\": \"LOW_CONFIDENCE\"\n      },\n      \"severity\": \"block\"\n    },\n    {\n      \"id\": \"HR-007-first-run-for-tenant-is-drafted\",\n      \"description\": \"A brand-new tenant/brand never publishes autonomously on its first N runs, whatever its settings say. Trust is earned by observed output.\",\n      \"when\": {\n        \"context.tenant_run_count\": {\n          \"lt\": 5\n        }\n      },\n      \"then\": {\n        \"action\": \"downgrade_autonomy\",\n        \"reason_code\": \"TENANT_WARMUP\"\n      },\n      \"severity\": \"block\"\n    },\n    {\n      \"id\": \"HR-008-minor-or-health-audience\",\n      \"when\": {\n        \"brief.audience.description\": {\n          \"matches\": \"(?i)(child|minor|under 18|patient|diagnos)\"\n        }\n      },\n      \"then\": {\n        \"action\": \"require_approval\",\n        \"reason_code\": \"SENSITIVE_AUDIENCE\"\n      },\n      \"severity\": \"block\"\n    }\n  ],\n  \"policy_table\": [\n    {\n      \"tag\": \"distribute.publish\",\n      \"when\": {\n        \"context.channel\": {\n          \"eq\": \"telegram\"\n        }\n      },\n      \"bind\": \"dist.publish.telegram\"\n    },\n    {\n      \"tag\": \"distribute.publish\",\n      \"when\": {\n        \"context.channel\": {\n          \"eq\": \"linkedin\"\n        }\n      },\n      \"bind\": \"dist.publish.linkedin\"\n    },\n    {\n      \"tag\": \"distribute.publish\",\n      \"when\": {\n        \"context.channel\": {\n          \"eq\": \"blog\"\n        }\n      },\n      \"bind\": \"dist.publish.blog\"\n    },\n    {\n      \"tag\": \"distribute.publish\",\n      \"when\": {\n        \"context.channel\": {\n          \"eq\": \"email\"\n        }\n      },\n      \"bind\": \"dist.publish.email\"\n    },\n    {\n      \"tag\": \"distribute.publish\",\n      \"when\": {\n        \"context.channel\": {\n          \"eq\": \"instagram\"\n        }\n      },\n      \"bind\": \"dist.publish.meta\"\n    },\n    {\n      \"tag\": \"distribute.publish\",\n      \"when\": {\n        \"context.channel\": {\n          \"eq\": \"tiktok\"\n        }\n      },\n      \"bind\": \"dist.publish.tiktok\"\n    },\n    {\n      \"tag\": \"distribute.publish\",\n      \"when\": {\n        \"context.channel\": {\n          \"eq\": \"youtube\"\n        }\n      },\n      \"bind\": \"dist.publish.youtube\"\n    },\n    {\n      \"tag\": \"distribute.publish\",\n      \"when\": {\n        \"context.channel\": {\n          \"eq\": \"x\"\n        }\n      },\n      \"bind\": \"dist.publish.x\"\n    },\n    {\n      \"tag\": \"distribute.publish\",\n      \"when\": {\n        \"context.channel\": {\n          \"eq\": \"google_business\"\n        }\n      },\n      \"bind\": \"dist.publish.gbp\"\n    },\n    {\n      \"tag\": \"distribute.publish\",\n      \"when\": {\n        \"context.channel\": {\n          \"eq\": \"product_listing\"\n        }\n      },\n      \"bind\": \"dist.publish.catalog\"\n    }\n  ],\n  \"defaults\": {\n    \"intake.normalize\": \"intake.message.normalize\",\n    \"intake.transcribe\": \"intake.audio.transcribe\",\n    \"understand.classify\": \"understand.intent.classify\",\n    \"plan.brief\": \"plan.brief.synthesize\",\n    \"plan.campaign\": \"plan.campaign.compose\",\n    \"research.market\": \"research.web.search\",\n    \"research.product\": \"research.product.fetch\",\n    \"produce.copy.longform\": \"copy.longform.generate\",\n    \"produce.copy.short\": \"copy.short.generate\",\n    \"produce.script\": \"copy.script.generate\",\n    \"produce.localize\": \"copy.localize\",\n    \"produce.image.prompt\": \"prompt.image.compose\",\n    \"produce.image\": \"media.image.generate\",\n    \"produce.image.edit\": \"media.image.edit\",\n    \"produce.video.clip\": \"media.video.clip.generate\",\n    \"produce.audio.vo\": \"media.audio.vo.generate\",\n    \"produce.captions\": \"media.captions.generate\",\n    \"assemble.video\": \"media.video.render\",\n    \"asset.search\": \"media.image.search\",\n    \"asset.store\": \"asset.store.put\",\n    \"asset.log\": \"asset.ledger.append\",\n    \"verify.brand\": \"verify.brand.score\",\n    \"verify.compliance\": \"verify.compliance.screen\",\n    \"verify.rights\": \"verify.rights.check\",\n    \"approve.human\": \"approve.human.request\",\n    \"distribute.publish\": \"dist.publish.telegram\",\n    \"distribute.schedule\": \"dist.schedule.enqueue\",\n    \"measure.collect\": \"measure.metrics.collect\",\n    \"measure.score\": \"measure.creative.score\",\n    \"learn.update\": \"learn.playbook.update\",\n    \"ops.budget\": \"ops.budget.check\",\n    \"ops.clarify\": \"intake.clarification.request\"\n  },\n  \"gray_zone\": {\n    \"enabled\": true,\n    \"decisions\": [\n      \"play_selection\",\n      \"angle_selection\",\n      \"channel_mix\",\n      \"asset_reuse_vs_generate\",\n      \"variant_winner\",\n      \"clarification\"\n    ],\n    \"model_role\": \"reasoning.router\",\n    \"model_tier\": \"small\",\n    \"confidence_floor\": 0.6,\n    \"on_low_confidence\": \"ask_human\",\n    \"max_options\": 5,\n    \"contract\": \"The router is handed an ENUMERATED option list already filtered by hard rules and policy table, plus the brief and the vertical profile. It returns {chosen, confidence, rationale}. It cannot invent an option, cannot call a capability, and cannot see anything a hard rule removed.\"\n  }\n};\nconst VERTICAL_BINDINGS = {\n  \"generic\": {},\n  \"b2b_saas\": {\n    \"produce.image.prompt\": \"prompt.image.compose.ui_abstract\",\n    \"assemble.video\": \"media.video.render.explainer_wide\"\n  },\n  \"b2b_industrial\": {\n    \"produce.image.prompt\": \"prompt.image.compose.field_proof\",\n    \"assemble.video\": \"media.video.render.explainer_wide\"\n  },\n  \"ecommerce_dtc\": {\n    \"produce.image.prompt\": \"prompt.image.compose.product_studio\",\n    \"assemble.video\": \"media.video.render.ugc_vertical\",\n    \"research.product\": \"research.product.catalog\"\n  },\n  \"health_wellness\": {\n    \"verify.compliance\": \"verify.compliance.screen.strict\"\n  },\n  \"home_goods\": {\n    \"produce.image.prompt\": \"prompt.image.compose.lifestyle_room\",\n    \"assemble.video\": \"media.video.render.explainer_wide\",\n    \"research.product\": \"research.product.catalog\"\n  },\n  \"local_services\": {\n    \"produce.image.prompt\": \"prompt.image.compose.field_proof\",\n    \"assemble.video\": \"media.video.render.before_after\",\n    \"distribute.publish\": \"dist.publish.gbp\"\n  },\n  \"professional_services\": {\n    \"produce.image.prompt\": \"prompt.image.compose.ui_abstract\"\n  }\n};\n\nconst env = $('Envelope In').first().json;\nconst brief = env.payload?.brief ?? $json.brief ?? {};\nconst context = { ...(env.payload?.context ?? {}), ...($json.context ?? {}), ...$json };\n\nfunction readPath(path) {\n  // Supports \"a.b.c\" and \"a.b[].c\" (the latter collects across an array).\n  const parts = path.split('.');\n  let scope = parts.shift();\n  let cur = scope === 'envelope' ? env : scope === 'brief' ? brief : scope === 'context' ? context : undefined;\n  for (const raw of parts) {\n    if (cur == null) return undefined;\n    if (raw.endsWith('[]')) {\n      const key = raw.slice(0, -2);\n      const arr = cur[key];\n      if (!Array.isArray(arr)) return undefined;\n      cur = arr;\n      continue;\n    }\n    cur = Array.isArray(cur) ? cur.map(x => x?.[raw]).filter(v => v !== undefined) : cur[raw];\n  }\n  return cur;\n}\n\nfunction resolveRef(v) {\n  return (typeof v === 'string' && v.startsWith('@')) ? readPath(v.slice(1)) : v;\n}\n\n// Policy authors write PCRE-style inline flags ((?i)...) which JS RegExp rejects outright.\n// Translating them here rather than forbidding them keeps the rule files readable; the\n// validator compiles every pattern at build time so a genuinely broken one fails the build\n// instead of silently never matching a compliance rule.\nfunction toRegExp(pattern) {\n  const m = /^\\(\\?([imsux]+)\\)/.exec(pattern);\n  if (!m) return new RegExp(pattern);\n  const flags = m[1].replace(/[xu]/g, '');\n  return new RegExp(pattern.slice(m[0].length), flags);\n}\n\nfunction test(actual, op, expected) {\n  const exp = resolveRef(expected);\n  switch (op) {\n    case 'eq': return actual === exp;\n    case 'neq': return actual !== exp;\n    case 'in': return Array.isArray(exp) && exp.includes(actual);\n    case 'nin': return Array.isArray(exp) && !exp.includes(actual);\n    case 'gt': return Number(actual) > Number(exp);\n    case 'gte': return Number(actual) >= Number(exp);\n    case 'lt': return Number(actual) < Number(exp);\n    case 'lte': return Number(actual) <= Number(exp);\n    case 'exists': return (actual !== undefined && actual !== null) === Boolean(exp);\n    case 'matches': return toRegExp(exp).test(String(actual ?? ''));\n    case 'any_of': {\n      const arr = Array.isArray(actual) ? actual : [actual];\n      return Array.isArray(exp) && arr.some(a => exp.includes(a));\n    }\n    default: return false;\n  }\n}\n\nfunction matches(when) {\n  if (!when || Object.keys(when).length === 0) return true;\n  return Object.entries(when).every(([path, cond]) =>\n    Object.entries(cond).every(([op, expected]) => test(readPath(path), op, expected))\n  );\n}\n\nconst decision = {\n  decision_id: 'dec_' + (env.trace_id ?? 'x').slice(4, 16) + '_' + TAG.replace(/\\./g, '_'),\n  trace_id: env.trace_id,\n  tenant_id: env.tenant_id,\n  vertical: env.vertical ?? 'generic',\n  kind: 'capability_binding',\n  question: 'Which implementation satisfies ' + TAG + '?',\n  options: [],\n  at: new Date().toISOString()\n};\n\nlet resolved = null, by = null, ruleId = null, vetoed = null;\nconst constraints = [];\n\nfor (const layer of POLICY.precedence) {\n  if (resolved || vetoed) break;\n\n  if (layer === 'hard_rule') {\n    for (const rule of POLICY.hard_rules) {\n      if (!matches(rule.when)) continue;\n      decision.options.push({ value: rule.id, eliminated_by: null });\n      const act = rule.then.action;\n      if (act === 'veto') { vetoed = rule; break; }\n      if (act === 'bind') { resolved = rule.then.capability; by = 'hard_rule'; ruleId = rule.id; break; }\n      // require_approval / downgrade_autonomy / force_provider / add_step do not BIND —\n      // they constrain the run and are carried forward for the orchestrator to honour.\n      constraints.push({ rule_id: rule.id, action: act, reason_code: rule.then.reason_code, message: rule.then.message ?? null });\n    }\n  }\n\n  if (layer === 'vertical_binding' && !resolved) {\n    const bound = VERTICAL_BINDINGS[env.vertical ?? 'generic']?.[TAG];\n    if (bound) { resolved = bound; by = 'vertical_binding'; ruleId = (env.vertical ?? 'generic') + ':' + TAG; }\n  }\n\n  if (layer === 'policy_table' && !resolved) {\n    for (const row of POLICY.policy_table) {\n      if (!matches(row.when)) { decision.options.push({ value: row.bind, eliminated_by: 'policy_table_condition' }); continue; }\n      resolved = row.bind; by = 'policy_table'; ruleId = row.note ?? null; break;\n    }\n  }\n\n  if (layer === 'default' && !resolved) {\n    const d = POLICY.defaults[TAG];\n    if (d) { resolved = d; by = 'default'; }\n  }\n}\n\nif (vetoed) {\n  return [{ json: {\n    resolved_capability: null,\n    vetoed: true,\n    decision: { ...decision, chosen: 'VETO:' + vetoed.id, decided_by: 'hard_rule', rule_id: vetoed.id, rationale: vetoed.then.message ?? vetoed.description ?? 'Blocked by a hard rule.' },\n    error: { code: vetoed.then.reason_code === 'BUDGET_EXCEEDED' ? 'BUDGET_EXCEEDED' : 'POLICY_BLOCKED', message: vetoed.then.message ?? vetoed.id, retryable: false, at: new Date().toISOString() }\n  } }];\n}\n\nif (!resolved) {\n  throw new Error('INTERNAL: no implementation resolved for tag ' + TAG + ' and no default is declared. This is a build-time error that escaped the validator.');\n}\n\nreturn [{ json: {\n  ...$json,\n  resolved_capability: resolved,\n  routing: { requested_capability: TAG, resolved_capability: resolved, implementation: resolved, binding_source: by, decision_id: decision.decision_id },\n  constraints,\n  decision: { ...decision, chosen: resolved, decided_by: by, rule_id: ruleId, rationale: 'Bound by ' + by + (ruleId ? ' (' + ruleId + ')' : '') + '.' }\n} }];\n"
+      }
+    },
+    {
+      "id": "n_0010",
+      "name": "Route to Adapter · Record Decision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        1020
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_STATE_URL }}/decisions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.decision) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0011",
+      "name": "Publish",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        580,
+        1020
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "={{ $json.resolved_capability }}",
+          "mode": "id",
+          "cachedResultName": "={{ $json.resolved_capability }}"
+        },
+        "mode": "once",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envelope": "={{ $json }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0012",
+      "name": "Collect Outcomes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        1020
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Partial success is a normal outcome, not an error. Report exactly what went out and what\n// did not, so a human fixes one channel instead of re-running a whole campaign.\nconst items = $input.all().map(i => i.json);\nconst ok = items.filter(x => x.published_at && !x.error);\nconst failed = items.filter(x => x.error);\nreturn [{ json: {\n  published: ok.map(x => ({ channel: x.channel, external_id: x.external_id, url: x.url || null })),\n  failed: failed.map(x => ({ channel: x.channel, code: x.error.code, message: x.error.message })),\n  status: failed.length === 0 ? 'complete' : (ok.length ? 'partial' : 'failed'),\n  published_count: ok.length,\n  failed_count: failed.length\n} }];"
+      }
+    },
+    {
+      "id": "n_0013",
+      "name": "Log to Ledger",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1260,
+        1020
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "asset.ledger.append",
+          "mode": "id",
+          "cachedResultName": "asset.ledger.append"
+        },
+        "mode": "each",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envelope": "={{ $json }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "n_0016",
+      "name": "Queued for Later",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2960,
+        500
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a_0014",
+              "name": "status",
+              "value": "queued",
+              "type": "string"
+            },
+            {
+              "id": "a_0015",
+              "name": "scheduled_for",
+              "value": "={{ $json.slot_at }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n_0020",
+      "name": "Provenance & Span End",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        1220
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED epilogue — appends exactly one provenance entry and closes the span.\n// Provenance is append-only; nothing in the estate is permitted to rewrite an earlier entry.\nconst e = $('Envelope In').first().json;\nconst out = $json;\nconst duration = Date.now() - (e._started_at ?? Date.now());\nconst entry = {\n  capability: \"sub.distribution\",\n  version: \"1.0.0\",\n  at: new Date().toISOString(),\n  duration_ms: duration,\n  model: out._model ?? null,\n  provider: out._provider ?? null,\n  cost_minor_units: out._cost_minor_units ?? 0,\n  inputs_hash: e.idempotency_key,\n  decision_id: out.decision?.decision_id ?? null\n};\nreturn [{ json: {\n  ...out,\n  _envelope: {\n    ...e,\n    span_id: e.parent_span_id,\n    provenance: [...(e.provenance ?? []), entry],\n    budget: { ...(e.budget ?? {}), spent_minor_units: (e.budget?.spent_minor_units ?? 0) + (entry.cost_minor_units ?? 0) }\n  },\n  _telemetry: {\n    event_id: 'evt_' + Math.random().toString(36).slice(2, 12),\n    trace_id: e.trace_id, span_id: e.span_id, tenant_id: e.tenant_id,\n    capability: \"sub.distribution\", capability_version: \"1.0.0\",\n    layer: \"subsystem\", event: 'span_end', status: out.error ? 'error' : 'ok',\n    duration_ms: duration, cost_minor_units: entry.cost_minor_units,\n    error_code: out.error?.code ?? null, at: new Date().toISOString()\n  }\n} }];"
+      }
+    },
+    {
+      "id": "n_0021",
+      "name": "Emit Telemetry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        580,
+        1220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_TELEMETRY_URL }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._telemetry) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0022",
+      "name": "On Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        1660
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "n_0023",
+      "name": "Park to DLQ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        580,
+        1660
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_STATE_URL }}/dlq",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  capability: \"sub.distribution\",\n  capability_version: \"1.0.0\",\n  trace_id: $json.execution?.id,\n  error: { message: $json.execution?.error?.message, node: $json.execution?.lastNodeExecuted, stack: $json.execution?.error?.stack },\n  envelope: $json.execution?.data,\n  replayable: true,\n  at: new Date().toISOString()\n}) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0024",
+      "name": "Notify Ops",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        920,
+        1660
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $env.MOS_OPS_CHAT_ID }}",
+        "text": "=Run failed in sub.distribution\n{{ $json.execution?.error?.message }}\nNode: {{ $json.execution?.lastNodeExecuted }}\nReplay: mos replay {{ $json.execution?.id }}",
+        "additionalFields": {}
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Governance Cleared?": {
+      "main": [
+        [
+          {
+            "node": "Governance Cleared? · Pass?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Governance Cleared? · Pass?": {
+      "main": [
+        [
+          {
+            "node": "Build Publish Requests",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Governance Cleared? · Blocked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to Adapter": {
+      "main": [
+        [
+          {
+            "node": "Route to Adapter · Record Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Publish Requests": {
+      "main": [
+        [
+          {
+            "node": "Enqueue / Pace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enqueue / Pace": {
+      "main": [
+        [
+          {
+            "node": "Due Now?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Due Now?": {
+      "main": [
+        [
+          {
+            "node": "Route to Adapter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Queued for Later",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to Adapter · Record Decision": {
+      "main": [
+        [
+          {
+            "node": "Publish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish": {
+      "main": [
+        [
+          {
+            "node": "Collect Outcomes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Outcomes": {
+      "main": [
+        [
+          {
+            "node": "Log to Ledger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Envelope In",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envelope In": {
+      "main": [
+        [
+          {
+            "node": "Span Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Span Start": {
+      "main": [
+        [
+          {
+            "node": "Governance Cleared?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provenance & Span End": {
+      "main": [
+        [
+          {
+            "node": "Emit Telemetry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Ledger": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queued for Later": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Error": {
+      "main": [
+        [
+          {
+            "node": "Park to DLQ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Park to DLQ": {
+      "main": [
+        [
+          {
+            "node": "Notify Ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "errorWorkflow": "",
+    "timezone": "UTC",
+    "executionTimeout": 120
+  },
+  "tags": [
+    {
+      "name": "mos:subsystem"
+    },
+    {
+      "name": "mos:ga"
+    },
+    {
+      "name": "tag:subsystem.distribution"
+    }
+  ],
+  "meta": {
+    "mos": {
+      "capability_id": "sub.distribution",
+      "version": "1.0.0",
+      "layer": "subsystem",
+      "owner": "distribution",
+      "side_effects": "publish",
+      "idempotent": true,
+      "compensation": null,
+      "verticals": "*",
+      "compiled_at": null,
+      "compiled_from": "specs/subsystems/sub.distribution.json",
+      "extends": null,
+      "generated": "Compiled by marketing-os/compiler. Edit the spec, not this file — canvas edits are overwritten on the next build."
+    }
+  },
+  "pinData": {}
+}

@@ -1,0 +1,88 @@
+{
+  "capability": {
+    "id": "sys.orchestrator",
+    "version": "1.0.0",
+    "layer": "system",
+    "title": "Campaign Orchestrator",
+    "summary": "The loop: understand, plan, execute, verify, distribute, measure. It knows about capability TAGS and subsystems; it knows nothing about providers, platforms or verticals. Every branch it takes is a recorded decision, and every step it runs is late-bound through the router — which is what lets the same orchestrator run a plumber's job-of-the-week and an enterprise product launch without modification.",
+    "owner": "platform",
+    "maturity": "ga",
+    "capability_tags": ["system.orchestrate"],
+    "side_effects": "publish",
+    "idempotent": true,
+    "sla": { "p50_ms": 120000, "p95_ms": 600000, "timeout_ms": 1800000, "async": true },
+    "requires": { "capabilities": ["sub.intake", "plan.campaign.compose", "ops.budget.check", "sub.content", "sub.visual", "sub.motion", "sub.governance", "sub.distribution", "asset.ledger.append"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 60, "variable_by": ["play", "channels", "variants"] },
+    "observability": { "slo": "95% of runs reach a terminal state (published, parked or declined) within their deadline", "runbook": "docs/05-operations.md#orchestrator" }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "intake", "kind": "call", "title": "Intake & Understand", "group": "1 · Understand",
+        "with": { "capability": "sub.intake" } },
+      { "id": "has_brief", "kind": "if", "title": "Have a Brief?", "group": "1 · Understand",
+        "with": { "condition": "={{ !!$json.brief_id && $json.confidence >= 0.55 }}" },
+        "next": { "true": "plan", "false": "terminate_early" } },
+
+      { "id": "plan", "kind": "call", "title": "Compose Plan", "group": "2 · Plan",
+        "with": { "capability": "plan.campaign.compose" } },
+      { "id": "plan_ok", "kind": "if", "title": "Plan Found?", "group": "2 · Plan",
+        "with": { "condition": "={{ $json.no_fit !== true }}" },
+        "next": { "true": "budget", "false": "terminate_early" } },
+      { "id": "budget", "kind": "call", "title": "Reserve Budget", "group": "2 · Plan",
+        "with": { "capability": "ops.budget.check", "payload": { "estimate_minor_units": "={{ $json.estimate_minor_units }}", "optional": false } } },
+      { "id": "afford", "kind": "if", "title": "Affordable?", "group": "2 · Plan",
+        "with": { "condition": "={{ $json.decision !== 'deny' }}" },
+        "next": { "true": "dispatch", "false": "terminate_early" } },
+
+      { "id": "dispatch", "kind": "code", "title": "Dispatch Plan Nodes", "group": "3 · Produce",
+        "with": { "code": "// The plan is a DAG of TAGS. This node walks it, groups independent nodes for parallel\n// execution, and emits one dispatch item per production subsystem. It never names a\n// provider, a platform or a vertical — that is the router's job, one layer down.\nconst plan = $('Compose Plan').first().json;\nconst brief = $('Intake & Understand').first().json;\n\nconst SUBSYSTEM = {\n  'produce.copy.longform': 'sub.content', 'produce.copy.short': 'sub.content', 'produce.script': 'sub.content', 'produce.localize': 'sub.content', 'research.market': 'sub.content', 'research.product': 'sub.content',\n  'produce.image.prompt': 'sub.visual', 'produce.image': 'sub.visual', 'produce.image.edit': 'sub.visual', 'asset.search': 'sub.visual',\n  'produce.video.clip': 'sub.motion', 'produce.audio.vo': 'sub.motion', 'produce.captions': 'sub.motion', 'assemble.video': 'sub.motion',\n  'verify.brand': 'sub.governance', 'verify.compliance': 'sub.governance', 'verify.rights': 'sub.governance', 'approve.human': 'sub.governance',\n  'distribute.publish': 'sub.distribution', 'distribute.schedule': 'sub.distribution',\n  'measure.collect': 'sub.measurement', 'measure.score': 'sub.measurement', 'learn.update': 'sub.measurement'\n};\n\nconst needed = new Set((plan.nodes || []).map(n => SUBSYSTEM[n.tag]).filter(Boolean));\nconst production = ['sub.content', 'sub.visual', 'sub.motion'].filter(s => needed.has(s));\n\nreturn production.map(subsystem => ({ json: {\n  subsystem,\n  brief,\n  plan,\n  channel_allocation: plan.channel_allocation,\n  params: Object.fromEntries((plan.nodes || []).filter(n => SUBSYSTEM[n.tag] === subsystem).map(n => [n.tag, n.params]))\n} }));" } },
+      { "id": "content", "kind": "call", "title": "Content Factory", "group": "3 · Produce",
+        "with": { "capability": "sub.content", "mode": "conditional", "when": "={{ $json.subsystem === 'sub.content' }}", "parallel_group": "produce" } },
+      { "id": "visual", "kind": "call", "title": "Visual Factory", "group": "3 · Produce",
+        "with": { "capability": "sub.visual", "mode": "conditional", "when": "={{ $json.subsystem === 'sub.visual' }}", "parallel_group": "produce" } },
+      { "id": "motion", "kind": "call", "title": "Motion Factory", "group": "3 · Produce",
+        "with": { "capability": "sub.motion", "mode": "conditional", "when": "={{ $json.subsystem === 'sub.motion' }}", "parallel_group": "produce" } },
+      { "id": "assemble", "kind": "merge", "title": "Assemble Deliverables", "group": "3 · Produce",
+        "with": { "mode": "combine", "inputs": 3 } },
+
+      { "id": "governance", "kind": "call", "title": "Governance Gates", "group": "4 · Verify",
+        "with": { "capability": "sub.governance",
+          "note": "Non-bypassable. There is no path from production to distribution that does not pass through here." } },
+      { "id": "cleared", "kind": "if", "title": "Cleared?", "group": "4 · Verify",
+        "with": { "condition": "={{ $json.may_publish === true }}" },
+        "next": { "true": "distribute", "false": "park" } },
+
+      { "id": "distribute", "kind": "call", "title": "Distribute", "group": "5 · Distribute",
+        "with": { "capability": "sub.distribution" } },
+      { "id": "outcome", "kind": "switch", "title": "Outcome", "group": "5 · Distribute",
+        "with": { "value": "={{ $json.status }}", "cases": ["complete", "partial", "failed"], "fallback": "partial" },
+        "next": { "complete": "summarise", "partial": "summarise", "failed": "compensate" } },
+
+      { "id": "compensate", "kind": "code", "title": "Walk Compensations", "group": "6 · Recover",
+        "with": { "code": "// Saga rollback. Walk provenance BACKWARDS and invoke each entry's declared compensation.\n// Entries with no compensation (a delivered Telegram message, a sent email) are reported as\n// irreversible rather than silently skipped — an operator needs to know what is still out there.\nconst env = $('Envelope In').first().json;\nconst REGISTRY = JSON.parse($env.MOS_CAPABILITY_REGISTRY || '{}');\nconst steps = [...(env.provenance || [])].reverse();\nconst toCompensate = [], irreversible = [];\nfor (const s of steps) {\n  const cap = REGISTRY[s.capability];\n  if (!cap) continue;\n  if (['external_write', 'publish', 'spend'].includes(cap.side_effects)) {\n    if (cap.compensation) toCompensate.push({ capability: cap.compensation, for: s.capability, span: s.at });\n    else irreversible.push(s.capability);\n  }\n}\nreturn [{ json: { compensations: toCompensate, irreversible, requires_operator_notice: irreversible.length > 0 } }];" } },
+      { "id": "run_compensations", "kind": "call", "title": "Run Compensations", "group": "6 · Recover",
+        "with": { "capability": "={{ $json.capability }}", "mode": "dynamic", "each": "compensations" },
+        "onError": "continue", "next": "summarise" },
+
+      { "id": "park", "kind": "http", "title": "Park for Human", "group": "6 · Recover",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/runs/park", "auth": "headerAuth",
+          "body": { "trace_id": "={{ $('Envelope In').first().json.trace_id }}", "reason": "={{ $json.governance_status }}", "findings": "={{ $json.findings }}", "resume_from": "governance", "replayable": true },
+          "note": "Parked runs keep their trace_id and their produced assets. A human fixes the finding and replays from the gate — nothing is regenerated, so a compliance fix costs a review, not a re-run." },
+        "next": "summarise" },
+
+      { "id": "summarise", "next": "ledger", "kind": "llm", "title": "Human Summary", "group": "7 · Report",
+        "with": { "role": "copy.short",
+          "system": "Summarise a completed automation run for the person who asked for it, in at most four lines. Lead with what happened. Name what went out and where. Name what did not and why, plainly — a person reading this needs to know whether to act, not to be reassured.\n\nNever pad. Never apologise. No emoji.",
+          "prompt": "PLAY: {{ $('Compose Plan').first()?.json?.play_title }}\nPUBLISHED: {{ JSON.stringify($('Distribute').first()?.json?.published || []) }}\nFAILED: {{ JSON.stringify($('Distribute').first()?.json?.failed || []) }}\nGOVERNANCE: {{ $('Governance Gates').first()?.json?.governance_status }}\nSPEND (minor units): {{ $('Envelope In').first().json.budget?.spent_minor_units }}\nDEGRADATIONS: {{ $('Assemble Deliverables').first()?.json?.degradation_note || 'none' }}",
+          "structured": { "type": "object", "required": ["human_summary"], "properties": { "human_summary": { "type": "string" }, "needs_attention": { "type": "boolean" }, "next_action": { "type": "string" } } } } },
+      { "id": "ledger", "kind": "call", "title": "Close Run in Ledger", "group": "7 · Report",
+        "with": { "capability": "asset.ledger.append" }, "next": null },
+
+      { "id": "terminate_early", "kind": "code", "title": "Terminate Cleanly", "group": "7 · Report",
+        "with": { "code": "// Not every run should produce content. A thin brief, no matching play, or an unaffordable\n// plan all end here — visibly, with a reason, rather than by producing something nobody wanted.\nconst reasons = {\n  low_confidence: 'The request was too ambiguous to act on; a clarifying question was sent instead.',\n  no_fit: 'No declared play fits this request. A human needs to either widen the brief or add a play.',\n  budget: 'The plan costs more than this run is allowed to spend.'\n};\nconst r = $json.no_fit ? 'no_fit' : ($json.decision === 'deny' ? 'budget' : 'low_confidence');\nreturn [{ json: { terminal_state: 'declined', reason: r, human_summary: reasons[r], needs_attention: r !== 'low_confidence' } }];" },
+        "next": "ledger" }
+    ]
+  }
+}

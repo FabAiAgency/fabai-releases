@@ -1,0 +1,49 @@
+{
+  "capability": {
+    "id": "copy.short.generate",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Generate Short-form Copy",
+    "summary": "Social posts, captions, headlines, subject lines, ad variants, CTAs. Produces N variants in one call because variant count is the lever that makes paid testing and channel fan-out affordable.",
+    "owner": "content",
+    "maturity": "ga",
+    "capability_tags": ["produce.copy.short"],
+    "side_effects": "none",
+    "idempotent": true,
+    "providers": [
+      { "name": "anthropic", "model": "claude-haiku-4-5-20251001", "tier": "small", "cost_per_unit_minor": 1, "unit": "call" },
+      { "name": "openai", "model": "gpt-4.1-mini", "tier": "small", "cost_per_unit_minor": 1, "unit": "call" }
+    ],
+    "sla": { "p50_ms": 3000, "p95_ms": 12000, "timeout_ms": 45000 },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 1, "variable_by": ["variants", "locales"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "spec", "kind": "code", "title": "Resolve Slot Spec", "group": "Context",
+        "with": { "code": "const CHANNELS = JSON.parse($env.MOS_CHANNELS || '{}');\nconst p = $json.payload;\nconst slot = p.slot;\nconst fmt = CHANNELS[slot.channel]?.formats?.[slot.format] || {};\nreturn [{ json: { slot, limits: fmt, variants: p.variants || slot.variants || 1, brief: p.brief, profile: p.profile || {}, seed_text: p.seed_text || null, preserve: p.preserve || null } }];" } },
+      { "id": "write", "kind": "llm", "title": "Short-form Writer", "group": "Content Generation",
+        "with": {
+          "role": "copy.short",
+          "system": "You write short-form marketing copy. Variants must be GENUINELY different — different hook, different entry point, different proof — not the same sentence reworded. A set of near-identical variants is a failed generation because it tests nothing.\n\nHARD LIMITS: {{ JSON.stringify($json.limits) }}\nVOICE: {{ $json.profile.prompt_fragments?.voice }}\nHOOK RULE: {{ $json.profile.prompt_fragments?.hook_instruction || 'The first line must earn the second.' }}\nCTA RULE: {{ $json.profile.prompt_fragments?.cta_instruction }}\nBANNED: {{ ($json.profile.message?.lexicon?.banned || []).join(', ') }}\n{{ $json.preserve ? 'PRESERVE ACROSS VARIANTS: ' + $json.preserve : '' }}",
+          "prompt": "BRIEF:\n{{ JSON.stringify($json.brief) }}\n\n{{ $json.seed_text ? 'DERIVE FROM THIS SOURCE (do not contradict it):\\n' + $json.seed_text : '' }}\n\nProduce {{ $json.variants }} variant(s) for {{ $json.slot.channel }} / {{ $json.slot.format }}.",
+          "structured": {
+            "type": "object",
+            "required": ["variants"],
+            "properties": { "variants": { "type": "array", "items": { "type": "object", "required": ["body"], "properties": {
+              "hook": { "type": "string" },
+              "body": { "type": "string" },
+              "cta": { "type": "string" },
+              "hashtags": { "type": "array", "items": { "type": "string" } },
+              "alt_text": { "type": "string", "description": "Accessibility is not optional on channels that support it; it is also read by ranking systems." },
+              "angle": { "type": "string" },
+              "char_count": { "type": "integer" }
+            } } } }
+          }
+        } },
+      { "id": "enforce", "kind": "code", "title": "Enforce Limits", "group": "Content Generation",
+        "with": { "code": "const limits = $('Resolve Slot Spec').first().json.limits || {};\nconst lex = $('Resolve Slot Spec').first().json.profile?.message?.lexicon || {};\nconst out = ($json.output || $json).variants || [];\nconst kept = [], rejected = [];\nfor (const v of out) {\n  const text = [v.hook, v.body, v.cta].filter(Boolean).join('\\n');\n  const issues = [];\n  if (limits.max_chars && text.length > limits.max_chars) issues.push('over_max_chars');\n  if (limits.hashtags_max && (v.hashtags || []).length > limits.hashtags_max) v.hashtags = (v.hashtags || []).slice(0, limits.hashtags_max);\n  for (const b of (lex.banned || [])) if (text.toLowerCase().includes(b.toLowerCase())) issues.push('banned_term:' + b);\n  const rec = { ...v, char_count: text.length, issues };\n  (issues.length ? rejected : kept).push(rec);\n}\nreturn [{ json: { variants: kept, rejected, produced: out.length, usable: kept.length } }];" } }
+    ]
+  }
+}

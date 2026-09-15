@@ -1,0 +1,63 @@
+{
+  "capability": {
+    "id": "asset.store.put",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Store Asset Durably",
+    "summary": "Copies a provider URL or binary into tenant-scoped durable storage, computes a checksum for dedupe, embeds it for semantic search, and registers it in the DAM. Every producing capability ends here — that single rule is what turns scattered generations into a compounding asset library.",
+    "owner": "dam",
+    "maturity": "ga",
+    "capability_tags": ["asset.store"],
+    "output_schema": "contracts/creative-asset.schema.json",
+    "side_effects": "external_write",
+    "idempotent": true,
+    "compensation": "asset.store.delete",
+    "providers": [{ "name": "gdrive", "tier": "nano", "cost_per_unit_minor": 0, "unit": "call" }],
+    "sla": { "p50_ms": 1500, "p95_ms": 6000, "timeout_ms": 60000 },
+    "retry": { "max_attempts": 3, "backoff": "exponential", "base_ms": 2000 },
+    "requires": { "secrets": ["GOOGLE_DRIVE_OAUTH", "MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "materialise", "kind": "http", "title": "Fetch If URL", "group": "Persist",
+        "with": { "method": "GET", "url": "={{ $json.payload.source_url }}", "response": "file" },
+        "onError": "continue" },
+      { "id": "checksum", "kind": "code", "title": "Checksum & Dedupe Key", "group": "Persist",
+        "with": { "code": "const crypto = require('crypto');\nconst bin = $binary?.data;\nconst buf = bin ? Buffer.from(bin.data, 'base64') : Buffer.from(JSON.stringify($json.payload || {}));\nconst sum = crypto.createHash('sha256').update(buf).digest('hex');\nreturn [{ json: { checksum_sha256: sum, bytes: buf.length, mime: bin?.mimeType || 'application/octet-stream' } }];" } },
+      { "id": "dedupe", "kind": "http", "title": "Already Stored?", "group": "Persist",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/dam/by-checksum/{{ $json.checksum_sha256 }}?tenant_id={{ $('Envelope In').first().json.tenant_id }}", "auth": "headerAuth" },
+        "onError": "continue" },
+      { "id": "exists", "kind": "if", "title": "Dedupe Hit?", "group": "Persist",
+        "with": { "condition": "={{ !!$json.asset_id }}" },
+        "next": { "true": "return_existing", "false": "upload" } },
+      { "id": "return_existing", "next": null, "kind": "set", "title": "Return Existing", "group": "Persist",
+        "with": { "assignments": { "asset_id": "={{ $json.asset_id }}", "deduped": true, "note": "Identical bytes already in the library — no upload, no new row, no double count in the cost ledger." } } },
+      { "id": "upload", "kind": "gdrive", "title": "Upload", "group": "Persist",
+        "with": { "operation": "upload", "folder": "={{ $env.MOS_DRIVE_FOLDER }}/{{ $('Envelope In').first().json.tenant_id }}/{{ $now.toFormat('yyyy-MM') }}", "name": "={{ $('Envelope In').first().json.payload.kind }}_{{ $('Envelope In').first().json.trace_id }}_{{ $runIndex }}" } },
+      { "id": "share", "kind": "gdrive", "title": "Make Readable", "group": "Persist",
+        "with": { "operation": "share", "permission": "reader", "type": "anyone" } },
+      { "id": "embed", "kind": "http", "title": "Embed for Search", "group": "Index",
+        "with": { "method": "POST", "url": "https://api.openai.com/v1/embeddings", "auth": "openAiApi",
+          "body": { "model": "text-embedding-3-large", "input": "={{ [$('Envelope In').first().json.payload.prompt, ($('Envelope In').first().json.payload.tags || []).join(' '), $('Envelope In').first().json.payload.role].filter(Boolean).join(' | ') }}" } },
+        "onError": "continue" },
+      { "id": "register", "kind": "http", "title": "Register in DAM", "group": "Index",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/dam/assets", "auth": "headerAuth",
+          "body": {
+            "tenant_id": "={{ $('Envelope In').first().json.tenant_id }}",
+            "brand_id": "={{ $('Envelope In').first().json.brand_id }}",
+            "trace_id": "={{ $('Envelope In').first().json.trace_id }}",
+            "kind": "={{ $('Envelope In').first().json.payload.kind }}",
+            "role": "={{ $('Envelope In').first().json.payload.role || 'raw' }}",
+            "storage": { "provider": "gdrive", "uri": "={{ $('Upload').first().json.id }}", "public_url": "={{ $('Make Readable').first().json.webViewLink }}" },
+            "media": { "checksum_sha256": "={{ $('Checksum & Dedupe Key').first().json.checksum_sha256 }}", "bytes": "={{ $('Checksum & Dedupe Key').first().json.bytes }}", "mime": "={{ $('Checksum & Dedupe Key').first().json.mime }}" },
+            "generation": { "prompt": "={{ $('Envelope In').first().json.payload.prompt }}", "provider": "={{ $('Envelope In').first().json.payload.provider }}" },
+            "rights": { "license": "={{ $('Envelope In').first().json.payload.rights_license || 'generated' }}" },
+            "taxonomy": { "vertical": "={{ $('Envelope In').first().json.vertical }}", "tags": "={{ $('Envelope In').first().json.payload.tags || [] }}", "embedding": "={{ $('Embed for Search').first().json.data?.[0]?.embedding }}" },
+            "derived_from": "={{ $('Envelope In').first().json.payload.derived_from || [] }}"
+          } } }
+    ]
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "capability": {
+    "id": "copy.script.generate",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Generate Video Script",
+    "summary": "A shot-by-shot script whose beat structure comes from the vertical's `shot_grammar`. This is the mechanism that makes one video factory produce a UGC unboxing for DTC, a before/after for a plumber and an annotated mechanism walkthrough for an equipment maker — same workflow, different grammar.",
+    "owner": "content",
+    "maturity": "ga",
+    "capability_tags": ["produce.script"],
+    "side_effects": "none",
+    "idempotent": true,
+    "providers": [{ "name": "anthropic", "model": "claude-sonnet-5", "tier": "standard", "cost_per_unit_minor": 3, "unit": "call" }],
+    "sla": { "p50_ms": 6000, "p95_ms": 20000, "timeout_ms": 60000 },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 3, "variable_by": ["variants", "duration_s"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "beats", "kind": "code", "title": "Derive Beat Plan", "group": "Structure",
+        "with": { "code": "// Beat count and per-beat duration are DERIVED from the vertical grammar and the target\n// duration. Nothing here is hard-coded to a platform, so a 21s TikTok and a 75s industrial\n// walkthrough come out of the same arithmetic.\nconst p = $json.payload;\nconst profile = p.profile || {};\nconst grammar = profile.creative?.shot_grammar || ['hook', 'problem', 'proof', 'cta'];\nconst target = p.duration_s || profile.creative?.default_duration_s || 24;\nconst perBeat = Math.max(2, Math.round((target / grammar.length) * 10) / 10);\nreturn [{ json: {\n  brief: p.brief,\n  profile,\n  target_duration_s: target,\n  aspect_ratio: p.aspect_ratio || (profile.creative?.aspect_ratios || ['9:16'])[0],\n  beats: grammar.map((name, i) => ({ index: i, name, target_s: perBeat })),\n  variants: p.variants || 1,\n  vary: p.vary || 'all'\n} }];" } },
+      { "id": "script", "kind": "llm", "title": "Script Writer", "group": "Content Generation",
+        "with": {
+          "role": "copy.longform",
+          "system": "You write short-form video scripts as a sequence of beats.\n\nRULES\n- One beat, one idea, one shot. A beat that needs two shots is two beats.\n- The spoken line and the on-screen text are different: the line is conversational, the text carries the claim for sound-off viewing.\n- `visual` is what the camera sees, written so an image model could render it. No camera jargon the renderer cannot honour.\n- Respect each beat's target seconds; spoken words run about 2.7 per second.\n- {{ $json.profile.prompt_fragments?.hook_instruction || 'The first beat must contain motion and the subject.' }}\n\nBEAT GRAMMAR FOR THIS VERTICAL: {{ $json.beats.map(b => b.name).join(' -> ') }}\nVISUAL DIRECTION: {{ $json.profile.prompt_fragments?.visual_instruction }}\nVOICE: {{ $json.profile.prompt_fragments?.voice }}",
+          "prompt": "BRIEF:\n{{ JSON.stringify($json.brief) }}\n\nTARGET: {{ $json.target_duration_s }}s, {{ $json.aspect_ratio }}\nBEATS: {{ JSON.stringify($json.beats) }}\nVARIANTS: {{ $json.variants }} (vary: {{ $json.vary }})",
+          "structured": {
+            "type": "object",
+            "required": ["scripts"],
+            "properties": { "scripts": { "type": "array", "items": { "type": "object", "properties": {
+              "variant_label": { "type": "string" },
+              "title": { "type": "string" },
+              "total_duration_s": { "type": "number" },
+              "beats": { "type": "array", "items": { "type": "object", "required": ["name", "visual", "duration_s"], "properties": {
+                "name": { "type": "string" },
+                "visual": { "type": "string" },
+                "spoken": { "type": "string" },
+                "on_screen_text": { "type": "string" },
+                "duration_s": { "type": "number" },
+                "motion": { "type": "string", "description": "How the frame moves: push in, pan, static, handheld. Fed straight to the clip generator." }
+              } } },
+              "caption": { "type": "string" },
+              "thumbnail_beat_index": { "type": "integer" }
+            } } } }
+          }
+        } },
+      { "id": "budget", "kind": "code", "title": "Fit to Duration", "group": "Structure",
+        "with": { "code": "// Models overshoot duration reliably. Trimming here costs nothing; discovering it after\n// paying for clip generation costs the whole render.\nconst target = $('Derive Beat Plan').first().json.target_duration_s;\nconst scripts = ($json.output || $json).scripts || [];\nfor (const s of scripts) {\n  let total = s.beats.reduce((a, b) => a + (b.duration_s || 0), 0);\n  if (total > target * 1.15) {\n    const factor = target / total;\n    s.beats.forEach(b => { b.duration_s = Math.max(1.5, Math.round(b.duration_s * factor * 10) / 10); });\n    s.trimmed = true;\n  }\n  s.total_duration_s = s.beats.reduce((a, b) => a + b.duration_s, 0);\n}\nreturn [{ json: { scripts, target_duration_s: target } }];" } }
+    ]
+  }
+}

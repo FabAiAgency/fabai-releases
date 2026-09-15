@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fabai.dev/mos/contracts/creative-asset.schema.json",
+  "title": "Creative Asset",
+  "description": "Every artefact the system produces or ingests, in one shape. The DAM, the brand checker, the renderer and the publishers all key off this. `derived_from` makes the whole creative tree reconstructable from any leaf.",
+  "type": "object",
+  "required": ["asset_id", "tenant_id", "kind", "storage"],
+  "properties": {
+    "asset_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "brand_id": { "type": ["string", "null"] },
+    "trace_id": { "type": ["string", "null"] },
+    "kind": { "type": "string", "enum": ["image", "video", "audio", "copy", "doc", "carousel", "subtitle"] },
+    "role": { "type": "string", "enum": ["hero", "supporting", "background", "thumbnail", "b_roll", "voiceover", "music", "body_copy", "headline", "caption", "script", "raw"], "default": "raw" },
+
+    "storage": {
+      "type": "object",
+      "required": ["provider", "uri"],
+      "properties": {
+        "provider": { "type": "string", "enum": ["gdrive", "s3", "gcs", "azure_blob", "supabase", "inline", "provider_temp"] },
+        "uri": { "type": "string" },
+        "public_url": { "type": ["string", "null"] },
+        "expires_at": { "type": ["string", "null"], "format": "date-time", "description": "Provider temp URLs expire. Anything that must survive the run is copied to durable storage before this timestamp." }
+      }
+    },
+
+    "media": {
+      "type": "object",
+      "properties": {
+        "mime": { "type": "string" },
+        "bytes": { "type": ["integer", "null"] },
+        "width": { "type": ["integer", "null"] },
+        "height": { "type": ["integer", "null"] },
+        "aspect_ratio": { "type": ["string", "null"] },
+        "duration_s": { "type": ["number", "null"] },
+        "fps": { "type": ["number", "null"] },
+        "checksum_sha256": { "type": ["string", "null"], "description": "Also the dedupe key for the DAM." }
+      }
+    },
+
+    "text": { "type": ["string", "null"], "description": "Populated for copy/script/caption kinds." },
+
+    "generation": {
+      "type": "object",
+      "properties": {
+        "prompt": { "type": ["string", "null"] },
+        "negative_prompt": { "type": ["string", "null"] },
+        "model": { "type": ["string", "null"] },
+        "provider": { "type": ["string", "null"] },
+        "seed": { "type": ["integer", "null"] },
+        "params": { "type": "object" },
+        "cost_minor_units": { "type": ["integer", "null"] }
+      }
+    },
+
+    "rights": {
+      "type": "object",
+      "description": "Enterprise blocker if missing. A publisher MUST refuse an asset whose rights are `unknown` or expired.",
+      "properties": {
+        "license": { "type": "string", "enum": ["owned", "generated", "licensed_stock", "ugc_permission", "client_supplied", "unknown"], "default": "unknown" },
+        "source_url": { "type": ["string", "null"] },
+        "attribution_required": { "type": "boolean", "default": false },
+        "expires_at": { "type": ["string", "null"], "format": "date-time" },
+        "talent_release": { "type": "boolean", "default": false },
+        "usage_scope": { "type": "array", "items": { "type": "string" }, "examples": [["organic_social", "paid_social", "web", "print", "ooh"]] }
+      }
+    },
+
+    "review": {
+      "type": "object",
+      "properties": {
+        "brand": { "type": "object", "properties": { "status": { "type": "string", "enum": ["pass", "warn", "fail", "skipped"] }, "score": { "type": ["number", "null"] }, "violations": { "type": "array", "items": { "type": "string" } } } },
+        "compliance": { "type": "object", "properties": { "status": { "type": "string", "enum": ["pass", "warn", "fail", "skipped"] }, "findings": { "type": "array", "items": { "type": "object", "properties": { "rule_id": { "type": "string" }, "severity": { "type": "string", "enum": ["info", "warn", "block"] }, "detail": { "type": "string" } } } } } },
+        "human": { "type": "object", "properties": { "status": { "type": "string", "enum": ["pending", "approved", "rejected", "not_required"] }, "reviewer": { "type": ["string", "null"] }, "note": { "type": ["string", "null"] }, "at": { "type": ["string", "null"], "format": "date-time" } } }
+      }
+    },
+
+    "taxonomy": {
+      "type": "object",
+      "properties": {
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "vertical": { "type": ["string", "null"] },
+        "objective": { "type": ["string", "null"] },
+        "channel_fit": { "type": "array", "items": { "type": "string" } },
+        "embedding_ref": { "type": ["string", "null"], "description": "Vector id for semantic reuse search." }
+      }
+    },
+
+    "performance": {
+      "type": "object",
+      "description": "Written back by the measurement subsystem. This is what closes the loop: tomorrow's prompts are conditioned on yesterday's winners.",
+      "properties": {
+        "impressions": { "type": ["integer", "null"] },
+        "engagements": { "type": ["integer", "null"] },
+        "clicks": { "type": ["integer", "null"] },
+        "conversions": { "type": ["integer", "null"] },
+        "spend_minor_units": { "type": ["integer", "null"] },
+        "score": { "type": ["number", "null"], "description": "Normalised 0-1 creative score, comparable across channels." },
+        "last_synced_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+
+    "derived_from": { "type": "array", "items": { "type": "string" }, "description": "Parent asset ids. A rendered video lists its clips, VO and captions." },
+    "variant_group": { "type": ["string", "null"], "description": "Variants under test share a group id." },
+    "created_at": { "type": "string", "format": "date-time" },
+    "version": { "type": "integer", "minimum": 1, "default": 1 }
+  }
+}

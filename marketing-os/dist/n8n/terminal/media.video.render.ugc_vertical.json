@@ -1,0 +1,836 @@
+{
+  "name": "[terminal] Render Video — UGC Vertical",
+  "nodes": [
+    {
+      "id": "n_0028",
+      "name": "Frame · Envelope In",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        490,
+        170
+      ],
+      "parameters": {
+        "content": "## Envelope In",
+        "height": 330,
+        "width": 1040,
+        "color": 5
+      }
+    },
+    {
+      "id": "n_0029",
+      "name": "Frame · Render",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1510,
+        170
+      ],
+      "parameters": {
+        "content": "## Render",
+        "height": 330,
+        "width": 700,
+        "color": 6
+      }
+    },
+    {
+      "id": "n_0030",
+      "name": "Frame · Poll##0",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2190,
+        170
+      ],
+      "parameters": {
+        "content": "## Poll",
+        "height": 330,
+        "width": 1040,
+        "color": 7
+      }
+    },
+    {
+      "id": "n_0031",
+      "name": "Frame · Poll##1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        690
+      ],
+      "parameters": {
+        "content": "## Poll",
+        "height": 530,
+        "width": 1040,
+        "color": 2
+      }
+    },
+    {
+      "id": "n_0032",
+      "name": "Frame · Persist",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        490,
+        1090
+      ],
+      "parameters": {
+        "content": "## Persist",
+        "height": 330,
+        "width": 360,
+        "color": 1
+      }
+    },
+    {
+      "id": "n_0033",
+      "name": "Frame · Telemetry Out",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        830,
+        690
+      ],
+      "parameters": {
+        "content": "## Telemetry Out",
+        "height": 530,
+        "width": 700,
+        "color": 4
+      }
+    },
+    {
+      "id": "n_0034",
+      "name": "Frame · Error & DLQ",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        1530
+      ],
+      "parameters": {
+        "content": "## Error & DLQ",
+        "height": 330,
+        "width": 1040,
+        "color": 3
+      }
+    },
+    {
+      "id": "n_0019",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "n_0020",
+      "name": "Envelope In",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED preamble — every unit in the estate starts here, identically.\n// Rejects an envelope whose MAJOR version this unit does not implement, rather than\n// half-processing a shape it does not understand.\nconst SUPPORTED_MAJOR = 1;\nconst raw = $json.envelope ?? $json;\nconst v = String(raw.envelope_version ?? '0.0.0');\nif (Number(v.split('.')[0]) !== SUPPORTED_MAJOR) {\n  throw new Error('VALIDATION_FAILED: envelope_version ' + v + ' is not supported by media.video.render.ugc_vertical@1.0.0 (needs ' + SUPPORTED_MAJOR + '.x)');\n}\nfor (const f of ['trace_id', 'tenant_id', 'idempotency_key']) {\n  if (!raw[f]) throw new Error('VALIDATION_FAILED: envelope.' + f + ' is required');\n}\nif (raw.deadline_at && Date.parse(raw.deadline_at) < Date.now()) {\n  // Fail fast rather than start work that cannot finish in time.\n  throw new Error('TIMEOUT: deadline_at ' + raw.deadline_at + ' already passed before media.video.render.ugc_vertical started');\n}\nreturn [{ json: {\n  ...raw,\n  span_id: 'spn_' + Math.random().toString(36).slice(2, 10),\n  parent_span_id: raw.span_id ?? null,\n  policy: raw.policy ?? {},\n  budget: raw.budget ?? {},\n  provenance: raw.provenance ?? [],\n  _started_at: Date.now(),\n  _capability: \"media.video.render.ugc_vertical\",\n  _capability_version: \"1.0.0\"\n} }];"
+      }
+    },
+    {
+      "id": "n_0021",
+      "name": "Span Start",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED telemetry — span_start.\nconst e = $json;\nreturn [{ json: { ...e, _telemetry: {\n  event_id: 'evt_' + Math.random().toString(36).slice(2, 12),\n  trace_id: e.trace_id, span_id: e.span_id, parent_span_id: e.parent_span_id,\n  tenant_id: e.tenant_id, brand_id: e.brand_id ?? null, vertical: e.vertical ?? null,\n  capability: \"media.video.render.ugc_vertical\", capability_version: \"1.0.0\",\n  layer: \"terminal\", stage: e.stage ?? null,\n  event: 'span_start', at: new Date().toISOString()\n} } }];"
+      }
+    },
+    {
+      "id": "n_0022",
+      "name": "Budget Guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED budget guard — injected because media.video.render.ugc_vertical declares a cost\n// (estimate 15 minor units). A unit that can spend\n// money never gets to decide for itself whether it may.\nconst ESTIMATE = 15;\nconst e = $json;\nconst b = e.budget ?? {};\nconst cap_ = b.cap_minor_units ?? null;\nconst spent = b.spent_minor_units ?? 0;\nif (cap_ !== null && spent + ESTIMATE > cap_) {\n  throw new Error('BUDGET_EXCEEDED: ' + (spent + ESTIMATE) + ' would exceed cap ' + cap_ + ' in media.video.render.ugc_vertical');\n}\nlet tier = e.policy?.model_tier_cap ?? 'frontier';\nconst soft = b.soft_limit_pct ?? 0.8;\nif (cap_ !== null && spent + ESTIMATE > cap_ * soft) {\n  tier = { frontier: 'standard', standard: 'small', small: 'nano', nano: 'nano' }[tier] ?? 'small';\n}\nreturn [{ json: { ...e, policy: { ...(e.policy ?? {}), model_tier_cap: tier }, _budget_reserved: ESTIMATE } }];"
+      }
+    },
+    {
+      "id": "n_0001",
+      "name": "Build Timeline",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// The timeline is DATA assembled from parts, not a template with holes punched in it.\n// A missing clip degrades that beat to its still frame rather than failing the render:\n// a video with one static beat ships; a failed render ships nothing.\nconst p = $json.payload;\nconst beats = p.beats || [];\nconst clips = new Map((p.clips || []).map(c => [c.beat_index, c]));\nconst stills = new Map((p.stills || []).map(s => [s.beat_index, s]));\nconst ar = p.aspect_ratio || '9:16';\nconst DIMS = { '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350], '16:9': [1920, 1080] };\nconst [width, height] = DIMS[ar] || DIMS['9:16'];\n\nlet t = 0, degraded = 0;\nconst tracks = beats.map((b, i) => {\n  const clip = clips.get(i);\n  const still = stills.get(i);\n  if (!clip) degraded++;\n  const el = {\n    type: clip ? 'video' : 'image',\n    source: clip?.uri || still?.uri || null,\n    time: t,\n    duration: b.duration_s,\n    // A still standing in for a missing clip gets a slow push so the cut still breathes.\n    animations: clip ? [] : [{ type: 'scale', easing: 'linear', start_scale: '100%', end_scale: '108%' }]\n  };\n  t += b.duration_s;\n  return el;\n});\n\nif (tracks.some(x => !x.source)) throw new Error('VALIDATION_FAILED: a beat has neither clip nor still');\n\nreturn [{ json: {\n  output_format: 'mp4', width, height, frame_rate: 30,\n  elements: [\n    ...tracks,\n    p.voiceover_uri ? { type: 'audio', source: p.voiceover_uri, time: 0 } : null,\n    p.music_uri ? { type: 'audio', source: p.music_uri, time: 0, volume: 0.12, audio_fade_out: 1.5 } : null,\n    ...(p.cues || []).map(c => ({ type: 'text', text: c.text, time: c.start_s, duration: Math.max(0.4, c.end_s - c.start_s), ...(p.caption_style || {}) })),\n    p.end_card ? { type: 'composition', source: p.end_card, time: Math.max(0, t - 2.5), duration: 2.5 } : null\n  ].filter(Boolean),\n  total_duration_s: t,\n  degraded_beats: degraded\n} }];"
+      }
+    },
+    {
+      "id": "n_0002",
+      "name": "Submit Render",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1940,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.creatomate.com/v1/renders",
+        "options": {
+          "timeout": 600000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"source\": \"={{ $json }}\"\n}"
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 8000
+    },
+    {
+      "id": "n_0006",
+      "name": "Init Poll State",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2280,
+        300
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a_0003",
+              "name": "render_id",
+              "value": "={{ $json[0].id || $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "a_0004",
+              "name": "poll_attempt",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "a_0005",
+              "name": "poll_deadline",
+              "value": "={{ $now.plus(10, 'minutes').toISO() }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n_0007",
+      "name": "Backoff",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2620,
+        300
+      ],
+      "parameters": {
+        "amount": "={{ Math.min(45, 10 * Math.pow(1.4, $json.poll_attempt)) }}",
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "n_0008",
+      "name": "Check Render",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2960,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.creatomate.com/v1/renders/{{ $json.render_id }}",
+        "options": {
+          "timeout": 600000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth"
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 8000
+    },
+    {
+      "id": "n_0013",
+      "name": "Render Status",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        240,
+        820
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c_0009",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "succeeded",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "outputKey": "succeeded"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c_0010",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "failed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "outputKey": "failed"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c_0011",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "planned",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "outputKey": "planned"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c_0012",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "rendering",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "outputKey": "rendering"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "rendering"
+        }
+      }
+    },
+    {
+      "id": "n_0015",
+      "name": "Deadline Reached?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        580,
+        820
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c_0014",
+              "leftValue": "={{ $now.toMillis() < DateTime.fromISO($('Init Poll State').first().json.poll_deadline).toMillis() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "n_0016",
+      "name": "Increment Attempt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        820
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const s = $('Init Poll State').first().json;\nreturn [{ json: { ...s, poll_attempt: (s.poll_attempt || 0) + 1 } }];"
+      }
+    },
+    {
+      "id": "n_0017",
+      "name": "Fail Render",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        1020
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "throw new Error('PROVIDER_ERROR: render did not complete before deadline');"
+      }
+    },
+    {
+      "id": "n_0018",
+      "name": "Store Durably",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        580,
+        1220
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "asset.store.put",
+          "mode": "id",
+          "cachedResultName": "asset.store.put"
+        },
+        "mode": "once",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envelope": "={{ $json }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "n_0023",
+      "name": "Provenance & Span End",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        1020
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED epilogue — appends exactly one provenance entry and closes the span.\n// Provenance is append-only; nothing in the estate is permitted to rewrite an earlier entry.\nconst e = $('Envelope In').first().json;\nconst out = $json;\nconst duration = Date.now() - (e._started_at ?? Date.now());\nconst entry = {\n  capability: \"media.video.render.ugc_vertical\",\n  version: \"1.0.0\",\n  at: new Date().toISOString(),\n  duration_ms: duration,\n  model: out._model ?? null,\n  provider: out._provider ?? null,\n  cost_minor_units: out._cost_minor_units ?? 15,\n  inputs_hash: e.idempotency_key,\n  decision_id: out.decision?.decision_id ?? null\n};\nreturn [{ json: {\n  ...out,\n  _envelope: {\n    ...e,\n    span_id: e.parent_span_id,\n    provenance: [...(e.provenance ?? []), entry],\n    budget: { ...(e.budget ?? {}), spent_minor_units: (e.budget?.spent_minor_units ?? 0) + (entry.cost_minor_units ?? 0) }\n  },\n  _telemetry: {\n    event_id: 'evt_' + Math.random().toString(36).slice(2, 12),\n    trace_id: e.trace_id, span_id: e.span_id, tenant_id: e.tenant_id,\n    capability: \"media.video.render.ugc_vertical\", capability_version: \"1.0.0\",\n    layer: \"terminal\", event: 'span_end', status: out.error ? 'error' : 'ok',\n    duration_ms: duration, cost_minor_units: entry.cost_minor_units,\n    error_code: out.error?.code ?? null, at: new Date().toISOString()\n  }\n} }];"
+      }
+    },
+    {
+      "id": "n_0024",
+      "name": "Emit Telemetry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1260,
+        820
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_TELEMETRY_URL }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._telemetry) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0025",
+      "name": "On Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        1660
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "n_0026",
+      "name": "Park to DLQ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        580,
+        1660
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_STATE_URL }}/dlq",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  capability: \"media.video.render.ugc_vertical\",\n  capability_version: \"1.0.0\",\n  trace_id: $json.execution?.id,\n  error: { message: $json.execution?.error?.message, node: $json.execution?.lastNodeExecuted, stack: $json.execution?.error?.stack },\n  envelope: $json.execution?.data,\n  replayable: true,\n  at: new Date().toISOString()\n}) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0027",
+      "name": "Notify Ops",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        920,
+        1660
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $env.MOS_OPS_CHAT_ID }}",
+        "text": "=Run failed in media.video.render.ugc_vertical\n{{ $json.execution?.error?.message }}\nNode: {{ $json.execution?.lastNodeExecuted }}\nReplay: mos replay {{ $json.execution?.id }}",
+        "additionalFields": {}
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Build Timeline": {
+      "main": [
+        [
+          {
+            "node": "Submit Render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Render": {
+      "main": [
+        [
+          {
+            "node": "Init Poll State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Init Poll State": {
+      "main": [
+        [
+          {
+            "node": "Backoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backoff": {
+      "main": [
+        [
+          {
+            "node": "Check Render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Render": {
+      "main": [
+        [
+          {
+            "node": "Render Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Status": {
+      "main": [
+        [
+          {
+            "node": "Store Durably",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fail Render",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Deadline Reached?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Deadline Reached?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Deadline Reached?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deadline Reached?": {
+      "main": [
+        [
+          {
+            "node": "Increment Attempt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fail Render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Increment Attempt": {
+      "main": [
+        [
+          {
+            "node": "Backoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Envelope In",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envelope In": {
+      "main": [
+        [
+          {
+            "node": "Span Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Span Start": {
+      "main": [
+        [
+          {
+            "node": "Budget Guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Budget Guard": {
+      "main": [
+        [
+          {
+            "node": "Build Timeline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provenance & Span End": {
+      "main": [
+        [
+          {
+            "node": "Emit Telemetry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fail Render": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Durably": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Error": {
+      "main": [
+        [
+          {
+            "node": "Park to DLQ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Park to DLQ": {
+      "main": [
+        [
+          {
+            "node": "Notify Ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "errorWorkflow": "",
+    "timezone": "UTC",
+    "executionTimeout": 600
+  },
+  "tags": [
+    {
+      "name": "mos:terminal"
+    },
+    {
+      "name": "mos:ga"
+    },
+    {
+      "name": "tag:assemble.video"
+    }
+  ],
+  "meta": {
+    "mos": {
+      "capability_id": "media.video.render.ugc_vertical",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "owner": "motion",
+      "side_effects": "spend",
+      "idempotent": true,
+      "compensation": "asset.store.delete",
+      "verticals": [
+        "ecommerce_dtc",
+        "home_goods"
+      ],
+      "compiled_at": null,
+      "compiled_from": "specs/terminal/media.video.render.ugc_vertical.json",
+      "extends": "media.video.render",
+      "generated": "Compiled by marketing-os/compiler. Edit the spec, not this file — canvas edits are overwritten on the next build."
+    }
+  },
+  "pinData": {}
+}

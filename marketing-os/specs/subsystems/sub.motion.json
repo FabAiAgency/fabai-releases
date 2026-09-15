@@ -1,0 +1,51 @@
+{
+  "capability": {
+    "id": "sub.motion",
+    "version": "1.0.0",
+    "layer": "subsystem",
+    "title": "Motion Factory",
+    "summary": "The second screenshot, decomposed. Script to finished video: beats, keyframes, clips, voiceover, captions and render — every stage independently retryable, independently costed, and degradable to a still when a clip fails.",
+    "owner": "motion",
+    "maturity": "ga",
+    "capability_tags": ["subsystem.motion"],
+    "side_effects": "spend",
+    "idempotent": true,
+    "compensation": "asset.store.delete",
+    "sla": { "p50_ms": 180000, "p95_ms": 480000, "timeout_ms": 900000, "async": true },
+    "requires": { "capabilities": ["copy.script.generate", "prompt.image.compose", "media.image.generate", "media.video.clip.generate", "media.audio.vo.generate", "media.captions.generate", "media.video.render", "asset.ledger.append"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 400, "variable_by": ["duration_s", "variants"] },
+    "observability": { "slo": "95% of renders complete within 8 minutes" }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "script", "kind": "call", "title": "Write Script", "group": "Script",
+        "with": { "capability": "copy.script.generate" } },
+      { "id": "beats", "kind": "splitOut", "title": "Per Beat", "group": "Keyframes", "with": { "field": "scripts[0].beats" } },
+      { "id": "route_prompt", "kind": "route", "title": "Route Prompt Composer", "group": "Keyframes", "with": { "tag": "produce.image.prompt" } },
+      { "id": "prompts", "kind": "call", "title": "Compose Keyframe Prompts", "group": "Keyframes",
+        "with": { "capability": "={{ $json.resolved_capability }}", "mode": "dynamic" } },
+      { "id": "keyframes", "kind": "call", "title": "Generate Keyframes", "group": "Keyframes",
+        "with": { "capability": "media.image.generate", "mode": "each",
+          "note": "Keyframe first, then image-to-video. Cheaper and far more controllable than text-to-video, and the keyframe doubles as the fallback still if the clip job fails." } },
+      { "id": "clips", "kind": "call", "title": "Generate Clips", "group": "Clips",
+        "with": { "capability": "media.video.clip.generate", "mode": "each", "parallel_group": "media" },
+        "onError": "continue" },
+      { "id": "vo", "kind": "call", "title": "Generate Voiceover", "group": "Audio",
+        "with": { "capability": "media.audio.vo.generate", "parallel_group": "media" } },
+      { "id": "captions", "kind": "call", "title": "Generate Captions", "group": "Audio",
+        "with": { "capability": "media.captions.generate", "parallel_group": "media" } },
+      { "id": "gather", "kind": "merge", "title": "Gather Media", "group": "Assemble", "with": { "mode": "combine", "inputs": 3 } },
+      { "id": "degrade", "kind": "code", "title": "Fill Gaps with Stills", "group": "Assemble",
+        "with": { "code": "// Partial delivery over total failure. A missing clip becomes its keyframe with a slow push.\nconst beats = $json.beats || [];\nconst clips = new Map((($json.clips) || []).filter(c => c.asset_id).map(c => [c.beat_index, c]));\nconst stills = new Map((($json.keyframes) || []).map(k => [k.beat_index, k]));\nconst degraded = beats.filter((_, i) => !clips.has(i)).length;\nreturn [{ json: { ...$json, degraded_beats: degraded, degradation_note: degraded ? `${degraded} of ${beats.length} beats fell back to a still frame` : null, clips: [...clips.values()], stills: [...stills.values()] } }];" } },
+      { "id": "route_render", "kind": "route", "title": "Route Renderer", "group": "Assemble",
+        "with": { "tag": "assemble.video",
+          "note": "UGC vertical, wide explainer or before/after proof — chosen by vertical binding and aspect ratio, never by an if-statement in here." } },
+      { "id": "render", "kind": "call", "title": "Render", "group": "Assemble",
+        "with": { "capability": "={{ $json.resolved_capability }}", "mode": "dynamic" } },
+      { "id": "log", "kind": "call", "title": "Log to Ledger", "group": "Log",
+        "with": { "capability": "asset.ledger.append" } }
+    ]
+  }
+}

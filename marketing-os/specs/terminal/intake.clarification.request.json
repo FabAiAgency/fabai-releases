@@ -1,0 +1,31 @@
+{
+  "capability": {
+    "id": "intake.clarification.request",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Ask a Clarifying Question",
+    "summary": "When the brief is too thin to act on, the system asks rather than guesses. Costs one message; a wrong guess costs a full production run and a human's trust in the system.",
+    "owner": "intake",
+    "maturity": "ga",
+    "capability_tags": ["ops.clarify"],
+    "side_effects": "external_write",
+    "idempotent": true,
+    "sla": { "p50_ms": 900, "p95_ms": 4000, "timeout_ms": 86400000, "async": true },
+    "requires": { "secrets": ["TELEGRAM_BOT_TOKEN", "MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "compose", "kind": "code", "title": "Compose Question", "group": "Clarify",
+        "with": { "code": "// At most two questions, each answerable in a sentence. A six-question form does not get\n// answered; it gets ignored, and the run dies quietly.\nconst qs = ($json.payload.questions || []).slice(0, 2);\nconst partial = $json.payload.partial_brief || {};\nconst understood = [partial.objective && `objective: ${partial.objective}`, partial.offer?.name && `offer: ${partial.offer.name}`, (partial.channels || []).length && `channels: ${partial.channels.map(c => c.channel).join(', ')}`].filter(Boolean).join(' | ');\nreturn [{ json: {\n  text: `I can start on this, but I'd get it wrong without ${qs.length > 1 ? 'two answers' : 'one answer'}.\\n\\nWhat I have: ${understood || 'not much yet'}\\n\\n${qs.map((q, i) => `${i + 1}. ${q}`).join('\\n')}`,\n  questions: qs,\n  partial_brief: partial\n} }];" } },
+      { "id": "ask", "kind": "telegram", "title": "Ask", "group": "Clarify",
+        "with": { "operation": "sendMessage", "chatId": "={{ $('Envelope In').first().json.payload.reply_to || $env.MOS_DEFAULT_CHAT_ID }}", "text": "={{ $json.text }}" } },
+      { "id": "park", "kind": "http", "title": "Park Run", "group": "Clarify",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/runs/park", "auth": "headerAuth",
+          "body": { "trace_id": "={{ $('Envelope In').first().json.trace_id }}", "reason": "awaiting_clarification", "partial_brief": "={{ $('Compose Question').first().json.partial_brief }}", "questions": "={{ $('Compose Question').first().json.questions }}", "resume_on": "next_message_from_author" },
+          "note": "Parked with the partial brief attached, so the answer resumes the run instead of restarting it from the original message." } }
+    ]
+  }
+}

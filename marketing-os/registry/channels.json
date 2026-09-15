@@ -1,0 +1,75 @@
+{
+  "$schema": "../contracts/channel-registry.notes.md",
+  "version": "1.0.0",
+  "description": "Channel capabilities as data. A factory asks this file 'what fits here?' instead of hard-coding 1080x1080 or 3000 characters into a node. Changing a platform limit is a one-line edit that instantly corrects every workflow.",
+  "channels": {
+    "telegram": {
+      "title": "Telegram", "kind": "messaging", "adapter": "dist.publish.telegram",
+      "formats": { "message": { "max_chars": 4096 }, "photo": { "max_chars": 1024, "aspect_ratios": ["1:1", "4:5", "16:9"] }, "video": { "max_mb": 50, "max_duration_s": 60 }, "document": { "max_mb": 50 } },
+      "supports": { "scheduling": false, "threads": true, "alt_text": false, "link_preview": true },
+      "rate_limit": { "per_second": 30, "per_chat_per_minute": 20 }
+    },
+    "linkedin": {
+      "title": "LinkedIn", "kind": "social_professional", "adapter": "dist.publish.linkedin",
+      "formats": { "post": { "max_chars": 3000, "optimal_chars": 1300, "hashtags_max": 5 }, "article": { "max_chars": 110000 }, "image": { "aspect_ratios": ["1:1", "4:5", "1.91:1"], "max_mb": 10 }, "video": { "max_duration_s": 600, "optimal_duration_s": 45, "aspect_ratios": ["1:1", "4:5", "9:16"] }, "document_carousel": { "max_pages": 300 } },
+      "supports": { "scheduling": true, "alt_text": true, "first_comment": true, "utm": true },
+      "rate_limit": { "per_day": 25 }
+    },
+    "blog": {
+      "title": "Owned Blog / CMS", "kind": "owned", "adapter": "dist.publish.blog",
+      "formats": { "article": { "min_words": 700, "optimal_words": 1400, "requires": ["title", "meta_description", "slug", "hero_image"] } },
+      "supports": { "scheduling": true, "alt_text": true, "canonical": true, "structured_data": true },
+      "rate_limit": { "per_day": 50 }
+    },
+    "email": {
+      "title": "Email / Lifecycle", "kind": "owned", "adapter": "dist.publish.email",
+      "formats": { "broadcast": { "subject_max": 78, "preheader_max": 110 }, "sequence_step": { "subject_max": 78 } },
+      "supports": { "scheduling": true, "personalisation": true, "ab_subject": true, "unsubscribe_required": true },
+      "rate_limit": { "per_hour": 20000 }
+    },
+    "instagram": {
+      "title": "Instagram", "kind": "social_consumer", "adapter": "dist.publish.meta",
+      "formats": { "reel": { "max_duration_s": 90, "optimal_duration_s": 21, "aspect_ratios": ["9:16"], "caption_max": 2200 }, "feed_image": { "aspect_ratios": ["1:1", "4:5"], "caption_max": 2200, "hashtags_max": 30 }, "carousel": { "max_slides": 10 }, "story": { "max_duration_s": 60, "aspect_ratios": ["9:16"] } },
+      "supports": { "scheduling": true, "alt_text": true, "product_tags": true },
+      "rate_limit": { "per_day": 50 }
+    },
+    "tiktok": {
+      "title": "TikTok", "kind": "social_consumer", "adapter": "dist.publish.tiktok",
+      "formats": { "video": { "max_duration_s": 600, "optimal_duration_s": 27, "aspect_ratios": ["9:16"], "caption_max": 2200 } },
+      "supports": { "scheduling": true, "sound_selection": true, "captions": true },
+      "rate_limit": { "per_day": 15 }
+    },
+    "youtube": {
+      "title": "YouTube", "kind": "video", "adapter": "dist.publish.youtube",
+      "formats": { "short": { "max_duration_s": 60, "aspect_ratios": ["9:16"], "title_max": 100 }, "long": { "title_max": 100, "description_max": 5000, "requires": ["thumbnail", "chapters"] } },
+      "supports": { "scheduling": true, "captions": true, "end_screens": true },
+      "rate_limit": { "per_day": 20 }
+    },
+    "x": {
+      "title": "X", "kind": "social_consumer", "adapter": "dist.publish.x",
+      "formats": { "post": { "max_chars": 280 }, "thread": { "max_parts": 25 }, "long_post": { "max_chars": 25000 } },
+      "supports": { "scheduling": true, "alt_text": true, "threads": true },
+      "rate_limit": { "per_day": 100 }
+    },
+    "google_business": {
+      "title": "Google Business Profile", "kind": "local", "adapter": "dist.publish.gbp",
+      "formats": { "update": { "max_chars": 1500, "requires": ["image"] }, "offer": { "requires": ["start_at", "end_at"] }, "event": { "requires": ["title", "start_at"] } },
+      "supports": { "scheduling": true, "cta_buttons": true },
+      "rate_limit": { "per_day": 10 },
+      "note": "The highest-ROI channel for local service verticals and the one most often forgotten by generic tooling."
+    },
+    "product_listing": {
+      "title": "Marketplace / PDP", "kind": "commerce", "adapter": "dist.publish.catalog",
+      "formats": { "pdp_copy": { "title_max": 200, "bullets_max": 5, "bullet_chars": 500 }, "gallery": { "min_images": 5, "aspect_ratios": ["1:1"] }, "a_plus": { "modules_max": 7 } },
+      "supports": { "scheduling": false, "variants": true, "structured_attributes": true },
+      "rate_limit": { "per_hour": 200 }
+    },
+    "ads_meta": {
+      "title": "Meta Ads", "kind": "paid", "adapter": "dist.publish.ads_meta",
+      "formats": { "single_image": { "primary_text_max": 125, "headline_max": 40, "aspect_ratios": ["1:1", "4:5"] }, "video": { "optimal_duration_s": 15, "aspect_ratios": ["9:16", "4:5"] } },
+      "supports": { "scheduling": true, "ab_testing": true, "audiences": true },
+      "requires_gates": ["human_approval"],
+      "note": "Paid channels always carry a mandatory approval gate: mistakes here cost money per impression, not just reputation."
+    }
+  }
+}

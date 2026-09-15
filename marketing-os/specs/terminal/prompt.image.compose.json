@@ -1,0 +1,47 @@
+{
+  "capability": {
+    "id": "prompt.image.compose",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Compose Image Prompts",
+    "summary": "Brief + vertical creative grammar in, structured image prompts out. Deliberately separate from generation: prompts are cheap to review, iterate and cache, while generations are not. The original screenshots coupled these two — splitting them is where most of the cost saving in this system lives.",
+    "owner": "visual",
+    "maturity": "ga",
+    "capability_tags": ["produce.image.prompt"],
+    "side_effects": "none",
+    "idempotent": true,
+    "providers": [{ "name": "openai", "model": "gpt-4.1-mini", "tier": "small", "cost_per_unit_minor": 1, "unit": "call" }],
+    "sla": { "p50_ms": 3000, "p95_ms": 10000, "timeout_ms": 45000 },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 1, "variable_by": ["variants"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "compose", "kind": "llm", "title": "Image Prompt Agent", "group": "Prompt Composition",
+        "with": {
+          "role": "prompt.visual",
+          "system": "You write prompts for an image generation model.\n\nSTRUCTURE EVERY PROMPT AS: subject -> action or state -> setting -> light -> camera/framing -> material and texture -> mood. In that order. It is the order image models weight most reliably.\n\nRULES\n- Never ask for text to be rendered inside the image. Text is composited afterwards where it is legible, on-brand and correctly spelt.\n- Carry the vertical's style and negative prompt verbatim into every prompt.\n- Within a set, hold light direction, palette and lens consistent unless the brief asks for contrast. A set that does not look like a set is unusable even if every frame is individually good.\n- Describe what IS in frame. Negative space is described as space, not as an absence of objects.\n\nSTYLE: {{ $json.payload.profile.creative?.image_style }}\nNEGATIVE: {{ $json.payload.profile.creative?.image_negative }}\nDIRECTION: {{ $json.payload.profile.prompt_fragments?.visual_instruction }}",
+          "prompt": "BRIEF:\n{{ JSON.stringify($json.payload.brief) }}\n\nSET SIZE: {{ $json.payload.variants || 4 }}\nASPECT RATIO: {{ $json.payload.aspect_ratio || '1:1' }}\nROLE OF THESE IMAGES: {{ $json.payload.role || 'hero' }}\n{{ $json.payload.beats ? 'ONE PROMPT PER BEAT:\\n' + JSON.stringify($json.payload.beats) : '' }}",
+          "structured": {
+            "type": "object",
+            "required": ["prompts"],
+            "properties": {
+              "set_coherence_note": { "type": "string", "description": "The light, palette and lens held constant across the set. Re-stated into each prompt." },
+              "prompts": { "type": "array", "items": { "type": "object", "required": ["prompt", "title"], "properties": {
+                "title": { "type": "string" },
+                "prompt": { "type": "string" },
+                "negative_prompt": { "type": "string" },
+                "aspect_ratio": { "type": "string" },
+                "role": { "type": "string" },
+                "beat_index": { "type": "integer" },
+                "alt_text": { "type": "string" }
+              } } }
+            }
+          }
+        } },
+      { "id": "stamp", "kind": "code", "title": "Stamp Coherence", "group": "Prompt Composition",
+        "with": { "code": "const out = $json.output || $json;\nconst note = out.set_coherence_note || '';\nconst neg = $('Envelope In').first().json.payload?.profile?.creative?.image_negative || '';\nconst prompts = (out.prompts || []).map((p, i) => ({\n  ...p,\n  index: i,\n  prompt: note ? `${p.prompt}\\n\\nConsistent across set: ${note}` : p.prompt,\n  negative_prompt: [p.negative_prompt, neg].filter(Boolean).join(', ')\n}));\nreturn prompts.map(p => ({ json: p }));" } }
+    ]
+  }
+}

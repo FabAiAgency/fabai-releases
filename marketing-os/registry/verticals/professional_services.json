@@ -1,0 +1,95 @@
+{
+  "id": "professional_services",
+  "title": "Professional Services (agency, legal, accounting, consulting)",
+  "extends": "generic",
+  "description": "The product is judgement, and the buyer is buying a person as much as a firm. Expertise-led content is the entire funnel; the constraint is that the practitioners who have the expertise have no time to write.",
+
+  "taxonomy": {
+    "offer_types": ["service", "content", "event", "lead_magnet", "membership"],
+    "buyer_type_default": "b2b_smb",
+    "buying_cycle_days": 60,
+    "decision_makers": ["founder or department head", "finance approver", "an internal sceptic who owns the current process"],
+    "purchase_triggers": ["a deadline or filing", "an incident or dispute", "growth outpacing the in-house team", "a bad experience with the incumbent", "a funding or transaction event"],
+    "geo_scope_default": "regional"
+  },
+
+  "message": {
+    "proof_types": ["case_study", "certification", "testimonial", "press", "roster", "stat"],
+    "objection_library": ["how is this different from the firm we use", "hourly rates are unpredictable", "will I get the senior person or a junior", "do you know our industry", "confidentiality", "the switching cost is the relationship"],
+    "angle_library": ["a mistake we see every week", "what the rules actually say", "the deadline nobody diarised", "anonymised case teardown", "cost of getting it wrong", "how we scope and price", "a practitioner's opinion on a change in the field"],
+    "lexicon": { "prefer": ["specific scenarios", "named regulations or standards", "timeframes", "scoped deliverables"], "avoid": ["bespoke solutions", "world-class team", "holistic approach", "value-add"], "banned": ["guaranteed outcome", "we always win", "no risk"] },
+    "tone_default": ["authoritative", "plain", "generous with expertise"],
+    "reading_level": 10
+  },
+
+  "channels": {
+    "weights": { "linkedin": 0.4, "blog": 0.25, "email": 0.2, "youtube": 0.1, "x": 0.05 },
+    "formats": { "linkedin": ["post", "document_carousel", "article"], "blog": ["article"], "email": ["broadcast", "sequence_step"] },
+    "excluded": ["tiktok"]
+  },
+
+  "creative": {
+    "image_style": "editorial portrait of the practitioner, or a clean typographic card carrying one strong sentence; restrained palette, high contrast, no imagery of gavels, scales or handshakes",
+    "image_negative": "gavel, scales of justice, generic handshake, stock boardroom, blurred city skyline at dusk",
+    "video_style": "practitioner to camera answering one real question in under 60 seconds, captions burned in",
+    "shot_grammar": ["the question as asked by a client", "the short answer", "the nuance most people miss", "what to do about it", "who to ask"],
+    "aspect_ratios": ["1:1", "4:5", "9:16"],
+    "default_duration_s": 50,
+    "voice": { "gender": "neutral", "pace": "measured", "style": "authoritative" },
+    "asset_reuse_bias": 0.75
+  },
+
+  "compliance": { "profile": "standard", "regulated_claims": ["outcome or success rate", "regulatory interpretation", "client identity", "fee guarantees"], "review_mode": "always", "autonomy_ceiling": "publish_with_approval" },
+
+  "kpis": [
+    { "metric": "qualified_enquiries", "primary": true, "benchmark": null },
+    { "metric": "consult_bookings", "primary": true, "benchmark": null },
+    { "metric": "profile_views_of_practitioners", "primary": false, "benchmark": null },
+    { "metric": "email_reply_rate", "primary": false, "benchmark": 0.02 }
+  ],
+
+  "capability_bindings": { "produce.image.prompt": "prompt.image.compose.ui_abstract" },
+
+  "plays": [
+    {
+      "id": "expert_extraction",
+      "title": "Extract a practitioner's expertise from a voice note",
+      "objective": "demand_gen",
+      "when": "A practitioner has five minutes and something worth saying. The flagship play for this vertical — it removes the writing, not the expertise.",
+      "steps": [
+        { "tag": "intake.transcribe" },
+        { "tag": "plan.brief" },
+        { "tag": "produce.copy.longform", "with": { "constraint": "preserve the practitioner's actual reasoning and hedges; do not smooth away qualifications" } },
+        { "tag": "produce.copy.short", "with": { "derive_from": "longform", "variants": 3 } },
+        { "tag": "produce.image.prompt" },
+        { "tag": "produce.image" },
+        { "tag": "verify.compliance", "with": { "check": "no client identifiable, no outcome guarantee" } },
+        { "tag": "approve.human", "with": { "reviewer": "the practitioner" } },
+        { "tag": "distribute.publish", "with": { "fan_out": "per_channel" } }
+      ],
+      "expected_kpi": "qualified_enquiries"
+    },
+    {
+      "id": "deadline_calendar",
+      "title": "Regulatory / deadline calendar",
+      "objective": "awareness",
+      "when": "A recurring statutory or industry date is approaching in the audience's jurisdiction.",
+      "steps": [
+        { "tag": "plan.brief", "with": { "source": "schedule" } },
+        { "tag": "research.market", "with": { "focus": "current-year rules and thresholds" } },
+        { "tag": "produce.copy.short" },
+        { "tag": "verify.compliance" },
+        { "tag": "approve.human" },
+        { "tag": "distribute.publish" }
+      ],
+      "expected_kpi": "profile_views_of_practitioners"
+    }
+  ],
+
+  "prompt_fragments": {
+    "voice": "Write as the practitioner, not about them. Keep their hedges — in this field a qualification is a credential, and a confident overstatement is a liability.",
+    "proof_instruction": "Anonymised specifics beat named generalities. 'A manufacturer with 40 staff, three weeks before filing' is proof; 'our extensive experience' is not.",
+    "visual_instruction": "Either a real portrait or clean typography. No metaphor imagery from the legal/finance stock canon.",
+    "compliance_instruction": "Never state or imply a guaranteed outcome, and never make a client identifiable without an explicit release recorded in the brief."
+  }
+}

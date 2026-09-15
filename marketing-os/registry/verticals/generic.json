@@ -1,0 +1,148 @@
+{
+  "$schema": "../../contracts/vertical-profile.schema.json",
+  "id": "generic",
+  "title": "Generic Commercial",
+  "extends": null,
+  "description": "The base every other profile inherits. If a behaviour belongs here it belongs to marketing itself, not to an industry. Anything industry-shaped that leaks into this file is a bug: it means a workflow was written against one client's reality.",
+
+  "taxonomy": {
+    "offer_types": ["product_physical", "product_digital", "subscription", "service", "event", "content", "lead_magnet"],
+    "buyer_type_default": "b2c_individual",
+    "buying_cycle_days": 14,
+    "decision_makers": [],
+    "purchase_triggers": ["problem becomes urgent", "budget appears", "competitor failure", "seasonal moment", "social proof reaches threshold"],
+    "geo_scope_default": "national",
+    "seasonality": []
+  },
+
+  "message": {
+    "proof_types": ["testimonial", "stat", "demo", "review_score", "case_study"],
+    "objection_library": ["too expensive", "not the right time", "we already have something", "will it actually work for us", "switching looks painful"],
+    "angle_library": ["problem agitation", "before and after", "contrarian take", "mechanism reveal", "cost of inaction", "social proof stack", "founder story", "comparison"],
+    "cta_ladder": [
+      { "stage": "unaware", "label": "Read the breakdown", "commitment_level": "low" },
+      { "stage": "problem_aware", "label": "See how it works", "commitment_level": "low" },
+      { "stage": "solution_aware", "label": "Compare options", "commitment_level": "medium" },
+      { "stage": "product_aware", "label": "Start now", "commitment_level": "high" },
+      { "stage": "most_aware", "label": "Get started today", "commitment_level": "high" }
+    ],
+    "lexicon": {
+      "prefer": ["specific numbers", "concrete nouns", "second person"],
+      "avoid": ["revolutionary", "game-changing", "unlock", "in today's fast-paced world", "elevate", "seamless", "leverage", "delve"],
+      "banned": ["guaranteed results", "risk-free", "#1 in the world", "everyone is switching"]
+    },
+    "tone_default": ["direct", "concrete", "confident without hype"],
+    "reading_level": 8
+  },
+
+  "channels": {
+    "weights": { "linkedin": 0.2, "blog": 0.2, "email": 0.2, "instagram": 0.15, "x": 0.1, "youtube": 0.1, "tiktok": 0.05 },
+    "formats": { "linkedin": ["post", "image"], "blog": ["article"], "email": ["broadcast"], "instagram": ["feed_image", "reel"], "youtube": ["short"] },
+    "excluded": []
+  },
+
+  "creative": {
+    "image_style": "clean, natural light, uncluttered composition, single clear subject, honest colour",
+    "image_negative": "stock-photo handshake, fake smiling team around a laptop, lens flare, cluttered collage, distorted text, extra fingers, watermark",
+    "video_style": "hook in the first 1.5 seconds, one idea per clip, captions always on",
+    "shot_grammar": ["hook", "problem", "mechanism", "proof", "cta"],
+    "aspect_ratios": ["1:1", "9:16", "16:9"],
+    "default_duration_s": 24,
+    "voice": { "gender": "neutral", "pace": "medium", "style": "conversational" },
+    "asset_reuse_bias": 0.5
+  },
+
+  "compliance": { "profile": "standard", "regulated_claims": [], "required_disclaimers": [], "review_mode": "sampled", "autonomy_ceiling": "publish_with_approval" },
+
+  "kpis": [
+    { "metric": "engagement_rate", "primary": false, "benchmark": 0.03 },
+    { "metric": "click_through_rate", "primary": true, "benchmark": 0.015 },
+    { "metric": "cost_per_asset", "primary": false, "benchmark": null }
+  ],
+
+  "capability_bindings": {},
+
+  "plays": [
+    {
+      "id": "single_post",
+      "title": "One post, one channel",
+      "objective": "awareness",
+      "when": "The request names a single piece of content and a single destination.",
+      "steps": [
+        { "tag": "plan.brief" },
+        { "tag": "produce.copy.short" },
+        { "tag": "asset.search", "parallel_group": "visual" },
+        { "tag": "produce.image.prompt", "parallel_group": "visual" },
+        { "tag": "produce.image", "parallel_group": "visual" },
+        { "tag": "verify.brand" },
+        { "tag": "verify.compliance" },
+        { "tag": "distribute.publish" },
+        { "tag": "asset.log" }
+      ],
+      "expected_kpi": "engagement_rate"
+    },
+    {
+      "id": "pillar_and_shards",
+      "title": "Pillar article shredded into channel-native shards",
+      "objective": "demand_gen",
+      "when": "There is a substantive idea worth a long-form piece, and the brief names more than one channel.",
+      "steps": [
+        { "tag": "plan.brief" },
+        { "tag": "research.market" },
+        { "tag": "produce.copy.longform" },
+        { "tag": "produce.copy.short", "with": { "derive_from": "longform", "variants": 5 } },
+        { "tag": "produce.image.prompt", "parallel_group": "visual" },
+        { "tag": "produce.image", "parallel_group": "visual" },
+        { "tag": "verify.brand" },
+        { "tag": "verify.compliance" },
+        { "tag": "approve.human" },
+        { "tag": "distribute.publish", "with": { "fan_out": "per_channel" } },
+        { "tag": "measure.collect" }
+      ],
+      "expected_kpi": "click_through_rate"
+    },
+    {
+      "id": "short_form_video",
+      "title": "Short-form video from a standing start",
+      "objective": "awareness",
+      "when": "The brief asks for video, or the channel mix is weighted to vertical video.",
+      "steps": [
+        { "tag": "plan.brief" },
+        { "tag": "produce.script" },
+        { "tag": "produce.image.prompt" },
+        { "tag": "produce.image" },
+        { "tag": "produce.video.clip", "parallel_group": "media" },
+        { "tag": "produce.audio.vo", "parallel_group": "media" },
+        { "tag": "produce.captions", "parallel_group": "media" },
+        { "tag": "assemble.video" },
+        { "tag": "verify.brand" },
+        { "tag": "approve.human" },
+        { "tag": "distribute.publish" },
+        { "tag": "asset.log" }
+      ],
+      "expected_kpi": "watch_through_rate"
+    },
+    {
+      "id": "repurpose_winner",
+      "title": "Repurpose a proven winner",
+      "objective": "conversion",
+      "when": "Measurement has identified an asset scoring in the top decile and its channel is not saturated.",
+      "steps": [
+        { "tag": "measure.score" },
+        { "tag": "asset.search", "with": { "filter": "top_decile" } },
+        { "tag": "produce.copy.short", "with": { "variants": 3, "preserve": "angle" } },
+        { "tag": "produce.image.edit" },
+        { "tag": "verify.brand" },
+        { "tag": "distribute.publish", "with": { "fan_out": "adjacent_channels" } }
+      ],
+      "expected_kpi": "conversion_rate"
+    }
+  ],
+
+  "prompt_fragments": {
+    "voice": "Write like a knowledgeable person talking to a peer. Short sentences. No throat-clearing. Lead with the most useful thing you know.",
+    "proof_instruction": "Every claim that could be doubted gets a specific: a number, a name, a timeframe, or a verifiable detail. If you have none, soften the claim rather than inventing a specific.",
+    "visual_instruction": "Describe one clear subject, the light, the surface and the framing. Do not describe text to be rendered inside the image — text is composited afterwards where it is legible and correct.",
+    "cta_instruction": "One call to action, matched to how aware the reader already is. Never stack two asks."
+  }
+}
