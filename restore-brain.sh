@@ -77,10 +77,33 @@ for f in CLAUDE.md settings.json keybindings.json; do
   fi
 done
 
+# Copy contents WITHOUT touching .git directories. Third-party skills like
+# img2threejs are live git clones here; their pack files are read-only (444),
+# so a plain cp fails with "Permission denied" and — under set -e — kills the
+# whole restore before memory and agents are installed. Their .git is managed
+# by git, never by this script.
+#
+# No --delete anywhere: RESTORE.md records a dry run that reported "nothing
+# would be deleted" and was wrong.
+copy_tree() {
+  local src="$1" dst="$2"
+  mkdir -p "$dst"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --exclude '.git/' "$src/" "$dst/"
+  else
+    # Fallback: -f replaces read-only destinations instead of failing.
+    ( cd "$src" && find . -name .git -prune -o -print0 \
+        | while IFS= read -r -d "" p; do
+            if [ -d "$p" ]; then mkdir -p "$dst/$p"
+            else cp -f "$p" "$dst/$p"
+            fi
+          done )
+  fi
+}
+
 for d in skills plans scheduled-tasks; do
   if [ -d "$REPO_DIR/$d" ]; then
-    mkdir -p "$CLAUDE_DIR/$d"
-    cp -R "$REPO_DIR/$d/." "$CLAUDE_DIR/$d/"
+    copy_tree "$REPO_DIR/$d" "$CLAUDE_DIR/$d"
     ok "$d/"
   fi
 done
@@ -132,8 +155,7 @@ if [ -d "${CLAUDE_DIR}/projects" ] && [ ! -d "$PROJ_DIR" ]; then
     info "can be moved there later — nothing is lost."
   fi
 fi
-mkdir -p "$PROJ_DIR/memory"
-cp -R "$REPO_DIR/memory/." "$PROJ_DIR/memory/"
+copy_tree "$REPO_DIR/memory" "$PROJ_DIR/memory"
 ok "memory -> $PROJ_DIR/memory"
 info "$(find "$PROJ_DIR/memory" -name '*.md' | wc -l | tr -d ' ') memory files"
 
