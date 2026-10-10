@@ -1,0 +1,59 @@
+{
+  "capability": {
+    "id": "media.video.clip.generate",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Generate Video Clip",
+    "summary": "One beat, one clip. Submits an async job and POLLS to completion with a bounded budget. The original workflow used a fixed 90-second Wait node, which is wrong in both directions — it stalls fast jobs and silently truncates slow ones. Polling with a deadline fixes both.",
+    "owner": "motion",
+    "maturity": "ga",
+    "capability_tags": ["produce.video.clip"],
+    "side_effects": "spend",
+    "idempotent": true,
+    "compensation": "asset.store.delete",
+    "providers": [
+      { "name": "higgsfield", "model": "hf_video", "tier": "standard", "cost_per_unit_minor": 25, "unit": "second" },
+      { "name": "fal", "model": "kling-2", "tier": "standard", "cost_per_unit_minor": 30, "unit": "second" }
+    ],
+    "sla": { "p50_ms": 60000, "p95_ms": 240000, "timeout_ms": 600000, "async": true },
+    "retry": { "max_attempts": 2, "backoff": "exponential", "base_ms": 10000 },
+    "circuit_breaker": { "failure_threshold": 4, "window_s": 600, "cooldown_s": 300 },
+    "requires": { "secrets": ["HIGGSFIELD_API_KEY"], "capabilities": ["asset.store.put"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 120, "variable_by": ["duration_s", "variants"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "submit", "kind": "http", "title": "Submit Clip Job", "group": "Generate Videos",
+        "with": { "method": "POST", "url": "={{ $env.HIGGSFIELD_URL }}/v1/videos", "auth": "headerAuth",
+          "body": {
+            "prompt": "={{ $json.payload.visual }}",
+            "image_url": "={{ $json.payload.reference_image_uri || null }}",
+            "motion": "={{ $json.payload.motion || 'subtle push in' }}",
+            "duration_s": "={{ $json.payload.duration_s || 5 }}",
+            "aspect_ratio": "={{ $json.payload.aspect_ratio || '9:16' }}"
+          } } },
+      { "id": "init_poll", "next": "wait", "kind": "set", "title": "Init Poll State", "group": "Poll",
+        "with": { "assignments": { "job_id": "={{ $json.id || $json.job_id }}", "poll_attempt": 0, "poll_deadline": "={{ $now.plus(10, 'minutes').toISO() }}" } } },
+      { "id": "wait", "kind": "wait", "title": "Backoff", "group": "Poll",
+        "with": { "seconds": "={{ Math.min(60, 8 * Math.pow(1.5, $json.poll_attempt)) }}",
+          "note": "Exponential backoff rather than a flat sleep: a 12-second clip is ready long before 90 seconds, and a queued one is not ready at 90 either." } },
+      { "id": "poll", "kind": "http", "title": "Check Job", "group": "Poll",
+        "with": { "method": "GET", "url": "={{ $env.HIGGSFIELD_URL }}/v1/videos/{{ $json.job_id }}", "auth": "headerAuth" } },
+      { "id": "status", "kind": "switch", "title": "Job Status", "group": "Poll",
+        "with": { "value": "={{ $json.status }}", "cases": ["completed", "failed", "processing"], "fallback": "processing" },
+        "next": { "completed": "store", "failed": "fail", "processing": "deadline" } },
+      { "id": "deadline", "kind": "if", "title": "Deadline Reached?", "group": "Poll",
+        "with": { "condition": "={{ $now.toMillis() < DateTime.fromISO($('Init Poll State').first().json.poll_deadline).toMillis() }}" },
+        "next": { "true": "bump", "false": "fail" } },
+      { "id": "bump", "kind": "code", "title": "Increment Attempt", "group": "Poll",
+        "with": { "code": "const s = $('Init Poll State').first().json;\nreturn [{ json: { ...s, poll_attempt: (s.poll_attempt || 0) + 1 } }];" },
+        "next": "wait" },
+      { "id": "fail", "next": null, "kind": "code", "title": "Fail Clip", "group": "Poll",
+        "with": { "code": "// A failed clip must not fail the whole video. The motion subsystem degrades to a still\n// frame for this beat and carries on — partial delivery beats a discarded render.\nreturn [{ json: { error: { code: 'PROVIDER_ERROR', message: 'Clip job did not complete before deadline', retryable: true, provider: 'higgsfield', at: new Date().toISOString() }, degrade_to: 'still_frame', beat_index: $('Envelope In').first().json.payload.beat_index } }];" } },
+      { "id": "store", "kind": "call", "title": "Store Durably", "group": "Persist",
+        "with": { "capability": "asset.store.put", "payload": { "kind": "video", "role": "b_roll", "source_url": "={{ $json.output_url }}", "duration_s": "={{ $json.duration_s }}", "beat_index": "={{ $('Envelope In').first().json.payload.beat_index }}" } } }
+    ]
+  }
+}

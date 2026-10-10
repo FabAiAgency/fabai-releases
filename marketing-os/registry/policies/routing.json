@@ -1,0 +1,134 @@
+{
+  "$schema": "../../contracts/routing-policy.schema.json",
+  "id": "mos.routing.default",
+  "version": "1.0.0",
+  "description": "Matcher grammar: `when` is a conjunction of `path: {op: value}`. Paths resolve against {envelope, brief, context}. Ops: eq, neq, in, nin, gt, gte, lt, lte, exists, matches, any_of. An empty `when` always matches.",
+  "precedence": ["hard_rule", "vertical_binding", "policy_table", "model", "default"],
+
+  "hard_rules": [
+    {
+      "id": "HR-001-regulated-claim-requires-human",
+      "description": "Any claim tagged `regulated` (health outcome, financial return, legal result, efficacy) goes to a human before it can reach the public, regardless of tenant autonomy setting.",
+      "when": { "brief.message.key_claims[].risk": { "any_of": ["regulated"] } },
+      "then": { "action": "require_approval", "reason_code": "REGULATED_CLAIM", "message": "Regulated claim detected; human sign-off required before distribution." },
+      "severity": "block"
+    },
+    {
+      "id": "HR-002-paid-media-always-approved",
+      "description": "Paid channels spend money per impression. Never autonomous.",
+      "when": { "context.channel_kind": { "eq": "paid" } },
+      "then": { "action": "require_approval", "reason_code": "PAID_MEDIA" },
+      "severity": "block"
+    },
+    {
+      "id": "HR-003-unknown-rights-cannot-publish",
+      "description": "An asset whose licence is unknown or expired is never distributed. This is the rule that keeps an autonomous system out of court.",
+      "when": { "context.asset_rights": { "in": ["unknown", "expired"] } },
+      "then": { "action": "veto", "reason_code": "RIGHTS_UNVERIFIED", "message": "Asset rights unverified — blocked before distribution." },
+      "severity": "block"
+    },
+    {
+      "id": "HR-004-budget-exhausted",
+      "when": { "envelope.budget.spent_minor_units": { "gte": "@envelope.budget.cap_minor_units" } },
+      "then": { "action": "veto", "reason_code": "BUDGET_EXCEEDED" },
+      "severity": "block"
+    },
+    {
+      "id": "HR-005-residency-pins-provider",
+      "description": "EU/UK residency forces in-region providers even when a cheaper chain exists.",
+      "when": { "envelope.policy.data_residency": { "in": ["eu", "uk"] } },
+      "then": { "action": "force_provider", "reason_code": "DATA_RESIDENCY" },
+      "severity": "block"
+    },
+    {
+      "id": "HR-006-low-confidence-brief-asks",
+      "description": "The system asks rather than invents. A half-understood voice note becomes a question, not a campaign.",
+      "when": { "brief.confidence": { "lt": 0.55 } },
+      "then": { "action": "bind", "capability": "intake.clarification.request", "reason_code": "LOW_CONFIDENCE" },
+      "severity": "block"
+    },
+    {
+      "id": "HR-007-first-run-for-tenant-is-drafted",
+      "description": "A brand-new tenant/brand never publishes autonomously on its first N runs, whatever its settings say. Trust is earned by observed output.",
+      "when": { "context.tenant_run_count": { "lt": 5 } },
+      "then": { "action": "downgrade_autonomy", "reason_code": "TENANT_WARMUP" },
+      "severity": "block"
+    },
+    {
+      "id": "HR-008-minor-or-health-audience",
+      "when": { "brief.audience.description": { "matches": "(?i)(child|minor|under 18|patient|diagnos)" } },
+      "then": { "action": "require_approval", "reason_code": "SENSITIVE_AUDIENCE" },
+      "severity": "block"
+    }
+  ],
+
+  "policy_table": [
+    { "tag": "produce.image.prompt", "when": { "brief.offer.type": { "in": ["product_physical"] } }, "bind": "prompt.image.compose.product_studio", "note": "Physical goods lead with the product rendered cleanly; lifestyle comes second." },
+    { "tag": "produce.image.prompt", "when": { "brief.offer.type": { "in": ["service"] } }, "bind": "prompt.image.compose.field_proof", "note": "Services have no product shot. Proof of work, people and place carry the image." },
+    { "tag": "produce.image.prompt", "when": { "brief.offer.type": { "in": ["product_digital", "subscription"] } }, "bind": "prompt.image.compose.ui_abstract" },
+    { "tag": "assemble.video", "when": { "context.aspect_ratio": { "eq": "9:16" } }, "bind": "media.video.render.ugc_vertical" },
+    { "tag": "assemble.video", "when": { "context.aspect_ratio": { "in": ["16:9", "1:1"] } }, "bind": "media.video.render.explainer_wide" },
+    { "tag": "produce.copy.longform", "when": { "brief.channels[].channel": { "any_of": ["blog"] } }, "bind": "copy.longform.generate" },
+    { "tag": "produce.copy.short", "when": {}, "bind": "copy.short.generate" },
+    { "tag": "asset.search", "when": { "brief.assets.source_preference": { "in": ["reuse_first", "reuse_only"] } }, "bind": "media.image.search", "note": "Cheapest path first: a hit here skips an entire generation chain." },
+    { "tag": "verify.compliance", "when": { "envelope.policy.compliance_profile": { "neq": "none" } }, "bind": "verify.compliance.screen" },
+    { "tag": "distribute.publish", "when": { "context.channel": { "eq": "telegram" } }, "bind": "dist.publish.telegram" },
+    { "tag": "distribute.publish", "when": { "context.channel": { "eq": "linkedin" } }, "bind": "dist.publish.linkedin" },
+    { "tag": "distribute.publish", "when": { "context.channel": { "eq": "blog" } }, "bind": "dist.publish.blog" },
+    { "tag": "distribute.publish", "when": { "context.channel": { "eq": "email" } }, "bind": "dist.publish.email" },
+    { "tag": "distribute.publish", "when": { "context.channel": { "eq": "instagram" } }, "bind": "dist.publish.meta" },
+    { "tag": "distribute.publish", "when": { "context.channel": { "eq": "tiktok" } }, "bind": "dist.publish.tiktok" },
+    { "tag": "distribute.publish", "when": { "context.channel": { "eq": "youtube" } }, "bind": "dist.publish.youtube" },
+    { "tag": "distribute.publish", "when": { "context.channel": { "eq": "x" } }, "bind": "dist.publish.x" },
+    { "tag": "distribute.publish", "when": { "context.channel": { "eq": "google_business" } }, "bind": "dist.publish.gbp" },
+    { "tag": "distribute.publish", "when": { "context.channel": { "eq": "product_listing" } }, "bind": "dist.publish.catalog" }
+  ],
+
+  "gray_zone": {
+    "enabled": true,
+    "decisions": ["play_selection", "angle_selection", "channel_mix", "asset_reuse_vs_generate", "variant_winner", "clarification"],
+    "model_role": "reasoning.router",
+    "model_tier": "small",
+    "confidence_floor": 0.6,
+    "on_low_confidence": "ask_human",
+    "max_options": 5,
+    "contract": "The router is handed an ENUMERATED option list already filtered by hard rules and policy table, plus the brief and the vertical profile. It returns {chosen, confidence, rationale}. It cannot invent an option, cannot call a capability, and cannot see anything a hard rule removed."
+  },
+
+  "defaults": {
+    "intake.normalize": "intake.message.normalize",
+    "intake.transcribe": "intake.audio.transcribe",
+    "understand.classify": "understand.intent.classify",
+    "plan.brief": "plan.brief.synthesize",
+    "plan.campaign": "plan.campaign.compose",
+    "research.market": "research.web.search",
+    "research.product": "research.product.fetch",
+    "produce.copy.longform": "copy.longform.generate",
+    "produce.copy.short": "copy.short.generate",
+    "produce.script": "copy.script.generate",
+    "produce.localize": "copy.localize",
+    "produce.image.prompt": "prompt.image.compose",
+    "produce.image": "media.image.generate",
+    "produce.image.edit": "media.image.edit",
+    "produce.video.clip": "media.video.clip.generate",
+    "produce.audio.vo": "media.audio.vo.generate",
+    "produce.captions": "media.captions.generate",
+    "assemble.video": "media.video.render",
+    "asset.search": "media.image.search",
+    "asset.store": "asset.store.put",
+    "asset.log": "asset.ledger.append",
+    "verify.brand": "verify.brand.score",
+    "verify.compliance": "verify.compliance.screen",
+    "verify.rights": "verify.rights.check",
+    "approve.human": "approve.human.request",
+    "distribute.publish": "dist.publish.telegram",
+    "distribute.schedule": "dist.schedule.enqueue",
+    "measure.collect": "measure.metrics.collect",
+    "measure.score": "measure.creative.score",
+    "learn.update": "learn.playbook.update",
+    "ops.budget": "ops.budget.check",
+    "ops.clarify": "intake.clarification.request"
+  },
+
+  "audit": { "record_decisions": true, "sample_rate": 1, "retain_days": 400 }
+}

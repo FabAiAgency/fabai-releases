@@ -1,0 +1,39 @@
+{
+  "capability": {
+    "id": "dist.publish.email",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Publish to Email",
+    "summary": "Owned-list adapter. The highest-consequence organic channel in the estate: an email cannot be unsent, reaches an audience that gave permission, and a mistake costs deliverability that takes months to rebuild. Always approval-gated, always suppression-checked.",
+    "owner": "distribution",
+    "maturity": "beta",
+    "capability_tags": ["distribute.publish"],
+    "input_schema": "contracts/publish-request.schema.json",
+    "side_effects": "publish",
+    "idempotent": true,
+    "compensation": null,
+    "providers": [{ "name": "esp_webhook", "tier": "nano", "cost_per_unit_minor": 0, "unit": "call" }],
+    "sla": { "p50_ms": 2000, "p95_ms": 8000, "timeout_ms": 60000 },
+    "retry": { "max_attempts": 2, "backoff": "exponential", "base_ms": 5000 },
+    "requires": { "secrets": ["ESP_API_KEY", "MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "gates", "kind": "guard", "title": "Re-verify Gates", "group": "Publish", "with": { "checks": ["compliance", "brand", "rights", "approval"] } },
+      { "id": "preflight", "kind": "code", "title": "Deliverability Preflight", "group": "Publish",
+        "with": { "code": "// Deterministic checks that a model should never be asked to make.\nconst c = $json.payload.content || {};\nconst errs = [];\nif (!c.title) errs.push('subject_missing');\nif ((c.title || '').length > 78) errs.push('subject_too_long');\nif (!/unsubscribe/i.test(c.body || '')) errs.push('unsubscribe_link_missing');\nif (!$json.payload.account_ref) errs.push('sending_identity_missing');\nif (/\\b(free money|act now|risk.?free|guaranteed income)\\b/i.test([c.title, c.body].join(' '))) errs.push('spam_trigger_language');\nif (errs.length) throw new Error('VALIDATION_FAILED: ' + errs.join(', '));\nreturn [{ json: { subject: c.title, preheader: (c.caption || '').slice(0, 110), html: c.body, segment: $json.payload.segment || 'default' } }];" } },
+      { "id": "suppression", "kind": "http", "title": "Apply Suppression List", "group": "Publish",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/connectors/esp/segment", "auth": "headerAuth",
+          "body": { "tenant_id": "={{ $('Envelope In').first().json.tenant_id }}", "segment": "={{ $json.segment }}", "apply_suppression": true, "respect_frequency_cap": true } } },
+      { "id": "send", "kind": "http", "title": "Send Broadcast", "group": "Publish",
+        "with": { "method": "POST", "url": "={{ $env.ESP_WEBHOOK_URL }}", "auth": "headerAuth",
+          "body": { "from": "={{ $('Envelope In').first().json.payload.account_ref }}", "subject": "={{ $('Deliverability Preflight').first().json.subject }}", "preheader": "={{ $('Deliverability Preflight').first().json.preheader }}", "html": "={{ $('Deliverability Preflight').first().json.html }}", "recipients": "={{ $json.recipient_count }}", "send_at": "={{ $('Envelope In').first().json.payload.schedule?.at || null }}", "dry_run": "={{ $('Envelope In').first().json.payload.dry_run === true }}" } } },
+      { "id": "record", "kind": "http", "title": "Record Publication", "group": "Publish",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/publish", "auth": "headerAuth",
+          "body": { "idempotency_key": "={{ $('Envelope In').first().json.payload.idempotency_key }}", "channel": "email", "external_id": "={{ $json.broadcast_id }}", "published_at": "={{ $now.toISO() }}" } } }
+    ]
+  }
+}

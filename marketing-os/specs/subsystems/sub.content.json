@@ -1,0 +1,50 @@
+{
+  "capability": {
+    "id": "sub.content",
+    "version": "1.0.0",
+    "layer": "subsystem",
+    "title": "Content Factory",
+    "summary": "Brief in, channel-shaped copy out for every slot in the brief. Produces long-form once and shards it into channel-native short-form, which is why one research pass can feed a blog, five LinkedIn posts and an email without re-researching or contradicting itself.",
+    "owner": "content",
+    "maturity": "ga",
+    "capability_tags": ["subsystem.content"],
+    "side_effects": "none",
+    "idempotent": true,
+    "sla": { "p50_ms": 25000, "p95_ms": 80000, "timeout_ms": 240000 },
+    "requires": { "capabilities": ["research.web.search", "copy.longform.generate", "copy.short.generate", "copy.localize"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 12, "variable_by": ["channels", "variants", "locales"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "needs_research", "kind": "code", "title": "Research Needed?", "group": "Research",
+        "with": { "code": "// Research is not free and not always useful. A product launch from a brief that already\n// contains the facts needs none; a market-commentary piece needs it badly.\nconst b = $json.payload.brief;\nconst hasFacts = (b.offer?.proof || []).length > 0 && (b.message?.key_claims || []).every(c => c.substantiation);\nconst needsMarket = ['awareness', 'demand_gen', 'brand'].includes(b.objective) || (b.message?.angle || '').match(/trend|market|compare|versus|industry/i);\nreturn [{ json: { research: !hasFacts || !!needsMarket, query: `${b.offer?.name} ${b.message?.angle} ${b.audience?.description}`.slice(0, 300) } }];" } },
+      { "id": "gate", "kind": "if", "title": "Research?", "group": "Research",
+        "with": { "condition": "={{ $json.research === true }}" },
+        "next": { "true": "research", "false": "plan_slots" } },
+      { "id": "research", "kind": "call", "title": "Web Research", "group": "Research",
+        "with": { "capability": "research.web.search" }, "next": "plan_slots" },
+      { "id": "plan_slots", "kind": "code", "title": "Plan Copy Slots", "group": "Plan",
+        "with": { "code": "// One long-form anchor if any slot needs it; everything else shards from that anchor so\n// the whole campaign says one consistent thing.\nconst b = $('Envelope In').first().json.payload.brief;\nconst LONG = new Set(['blog', 'email', 'product_listing']);\nconst slots = b.channels || [];\nconst anchorSlot = slots.find(s => LONG.has(s.channel)) || null;\nreturn [{ json: {\n  anchor: anchorSlot,\n  shards: slots.filter(s => s !== anchorSlot),\n  locales: b.constraints?.locales || ['en-US'],\n  total_slots: slots.length\n} }];" } },
+      { "id": "has_anchor", "kind": "if", "title": "Long-form Anchor?", "group": "Plan",
+        "with": { "condition": "={{ !!$json.anchor }}" },
+        "next": { "true": "longform", "false": "split_shards" } },
+      { "id": "longform", "kind": "call", "title": "Write Long-form", "group": "Produce",
+        "with": { "capability": "copy.longform.generate" }, "next": "split_shards" },
+      { "id": "split_shards", "kind": "splitOut", "title": "Per Channel Slot", "group": "Produce", "with": { "field": "shards" } },
+      { "id": "shortform", "kind": "call", "title": "Write Short-form", "group": "Produce",
+        "with": { "capability": "copy.short.generate", "mode": "each",
+          "payload": { "seed_text": "={{ $('Write Long-form').first()?.json?.body || null }}", "slot": "={{ $json }}" } } },
+      { "id": "needs_locale", "kind": "if", "title": "Multi-locale?", "group": "Localise",
+        "with": { "condition": "={{ ($('Plan Copy Slots').first().json.locales || []).length > 1 }}" },
+        "next": { "true": "localize", "false": "collect" } },
+      { "id": "localize", "kind": "call", "title": "Localise", "group": "Localise",
+        "with": { "capability": "copy.localize", "mode": "each",
+          "note": "Localisation is a separate capability, not a prompt instruction. It carries its own lexicon, its own compliance variant and its own reviewer." },
+        "next": "collect" },
+      { "id": "collect", "kind": "code", "title": "Collect Copy", "group": "Produce",
+        "with": { "code": "const items = $input.all().map(i => i.json);\nreturn [{ json: { copy: items, slots_filled: items.length, anchor: $('Write Long-form').first()?.json || null } }];" } }
+    ]
+  }
+}

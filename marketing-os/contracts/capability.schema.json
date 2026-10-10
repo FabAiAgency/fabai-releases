@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fabai.dev/mos/contracts/capability.schema.json",
+  "title": "Capability Manifest",
+  "description": "The declaration a unit publishes about itself. The registry is the union of these. Nothing in the system may call a unit that has not declared one — that rule is what keeps 'add a workflow' from meaning 'read every other workflow first'.",
+  "type": "object",
+  "required": ["id", "version", "layer", "title", "capability_tags", "side_effects", "idempotent"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(\\.[a-z0-9_]+)+$", "description": "Dotted, domain-first: `media.image.generate`, not `generateImage`." },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "layer": { "type": "string", "enum": ["terminal", "subsystem", "system"] },
+    "title": { "type": "string" },
+    "summary": { "type": "string" },
+    "owner": { "type": "string", "description": "Team or person accountable. An unowned capability is not GA." },
+    "maturity": { "type": "string", "enum": ["experimental", "beta", "ga", "deprecated"], "default": "beta" },
+    "replaced_by": { "type": ["string", "null"] },
+
+    "capability_tags": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" },
+      "description": "Abstract things this unit can satisfy, e.g. `produce.image`. The router matches on tags, never on ids — that is what makes implementations swappable per vertical."
+    },
+
+    "input_schema": { "type": ["string", "null"], "description": "Path to a JSON Schema for envelope.payload on the way in." },
+    "output_schema": { "type": ["string", "null"] },
+
+    "side_effects": {
+      "type": "string",
+      "enum": ["none", "internal_write", "external_write", "publish", "spend"],
+      "description": "`publish` and `spend` are irreversible to the outside world and therefore require idempotency + compensation + an approval gate check."
+    },
+    "idempotent": { "type": "boolean" },
+    "compensation": { "type": ["string", "null"], "description": "Capability id that undoes this one (delete draft, unpublish, refund credit). Required when side_effects is external_write/publish." },
+
+    "providers": {
+      "type": "array",
+      "description": "Ordered preference. The circuit breaker walks this list; `fallback_depth` on the envelope records how far it had to walk.",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "model": { "type": ["string", "null"] },
+          "tier": { "type": "string", "enum": ["nano", "small", "standard", "frontier"], "default": "standard" },
+          "regions": { "type": "array", "items": { "type": "string" } },
+          "cost_per_unit_minor": { "type": ["number", "null"] },
+          "unit": { "type": "string", "enum": ["call", "1k_tokens", "image", "second", "minute", "mb"], "default": "call" }
+        }
+      }
+    },
+
+    "sla": {
+      "type": "object",
+      "properties": {
+        "p50_ms": { "type": "integer" },
+        "p95_ms": { "type": "integer" },
+        "timeout_ms": { "type": "integer" },
+        "async": { "type": "boolean", "default": false, "description": "True for long jobs (video render) that poll rather than block." }
+      }
+    },
+
+    "retry": {
+      "type": "object",
+      "properties": {
+        "max_attempts": { "type": "integer", "default": 3 },
+        "backoff": { "type": "string", "enum": ["none", "linear", "exponential"], "default": "exponential" },
+        "base_ms": { "type": "integer", "default": 2000 },
+        "jitter": { "type": "boolean", "default": true },
+        "retry_on": { "type": "array", "items": { "type": "string" }, "default": ["RATE_LIMITED", "TIMEOUT", "PROVIDER_ERROR"] }
+      }
+    },
+
+    "circuit_breaker": {
+      "type": "object",
+      "properties": {
+        "failure_threshold": { "type": "integer", "default": 5 },
+        "window_s": { "type": "integer", "default": 300 },
+        "cooldown_s": { "type": "integer", "default": 120 },
+        "half_open_probes": { "type": "integer", "default": 1 }
+      }
+    },
+
+    "requires": {
+      "type": "object",
+      "properties": {
+        "secrets": { "type": "array", "items": { "type": "string" } },
+        "scopes": { "type": "array", "items": { "type": "string" } },
+        "capabilities": { "type": "array", "items": { "type": "string" }, "description": "Other capability ids this one calls. The validator builds the dependency graph from this and rejects cycles." }
+      }
+    },
+
+    "verticals": {
+      "description": "`*` means vertical-agnostic (the default and the goal). A list means this implementation is a specialisation the router may bind to.",
+      "oneOf": [{ "const": "*" }, { "type": "array", "items": { "type": "string" } }],
+      "default": "*"
+    },
+
+    "cost_model": {
+      "type": "object",
+      "properties": {
+        "estimate_minor_units": { "type": "number", "description": "Used by the planner to price a campaign BEFORE running it." },
+        "variable_by": { "type": "array", "items": { "type": "string" }, "examples": [["variants", "duration_s", "locales"]] }
+      }
+    },
+
+    "observability": {
+      "type": "object",
+      "properties": {
+        "emits": { "type": "array", "items": { "type": "string" } },
+        "runbook": { "type": ["string", "null"] },
+        "slo": { "type": ["string", "null"], "examples": ["99.0% success over 7d"] }
+      }
+    },
+
+    "spec": { "type": ["string", "null"], "description": "Path to the declarative spec this manifest was compiled from." }
+  }
+}

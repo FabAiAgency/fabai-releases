@@ -1,0 +1,120 @@
+{
+  "id": "local_services",
+  "title": "Local & Home Services (trades, clinics, salons, fitness)",
+  "extends": "generic",
+  "description": "Geographically bounded, trust-gated, often urgent. Reach outside the service radius is waste, and the highest-leverage channel is the one generic tooling forgets: the map listing.",
+
+  "taxonomy": {
+    "offer_types": ["service", "event", "membership", "lead_magnet"],
+    "buyer_type_default": "b2c_household",
+    "buying_cycle_days": 2,
+    "decision_makers": ["homeowner or household decision maker"],
+    "purchase_triggers": ["something broke", "a seasonal changeover", "an inspection or move", "a recommendation from a neighbour", "a competitor no-showed"],
+    "geo_scope_default": "radius",
+    "seasonality": [
+      { "window": "first_cold_snap", "modifier": 3.0, "note": "Heating demand spikes within 48 hours of the first freeze. Creative must already be in the queue, not being briefed." },
+      { "window": "first_heat_wave", "modifier": 3.0 },
+      { "window": "spring_storm_season", "modifier": 2.0 },
+      { "window": "pre_holiday_hosting", "modifier": 1.4 }
+    ]
+  },
+
+  "message": {
+    "proof_types": ["review_score", "certification", "before_after", "testimonial", "warranty", "roster"],
+    "objection_library": ["are they licensed and insured", "will they show up when they say", "will the price change once they're here", "how fast can they come", "do they cover my area", "will they upsell me something I don't need"],
+    "angle_library": ["job of the week", "the honest price breakdown", "what a bad repair looks like", "meet the technician", "emergency availability", "seasonal maintenance reminder", "neighbour's review"],
+    "lexicon": {
+      "prefer": ["neighbourhood and town names", "response time in hours", "licence number", "upfront pricing language", "years in business"],
+      "avoid": ["world-class", "unparalleled", "trusted partner"],
+      "banned": ["free estimate" ],
+      "note": "`free estimate` is banned only where local rules restrict it — the compliance profile decides; the lexicon flags it for screening."
+    },
+    "tone_default": ["plain-spoken", "reassuring", "local"],
+    "reading_level": 6
+  },
+
+  "channels": {
+    "weights": { "google_business": 0.3, "instagram": 0.2, "email": 0.15, "blog": 0.15, "tiktok": 0.1, "ads_meta": 0.1 },
+    "formats": { "google_business": ["update", "offer", "event"], "instagram": ["reel", "feed_image", "story"], "blog": ["article"], "email": ["broadcast"] },
+    "excluded": ["linkedin", "x"]
+  },
+
+  "creative": {
+    "image_style": "real work in a real property, natural available light, identifiable local context, technician in branded workwear, honest and un-retouched",
+    "image_negative": "generic stock tradesperson, impossibly clean work site, staged handshake, tools held wrongly, branding that misspells the company name",
+    "video_style": "phone-shot from the job, narrated by the person who did the work, before and after in the same framing",
+    "shot_grammar": ["the problem on site", "what caused it", "the fix in progress", "the finished result in the same framing as the problem", "what it cost and how fast", "service area + call to action"],
+    "aspect_ratios": ["9:16", "1:1"],
+    "default_duration_s": 27,
+    "voice": { "gender": "neutral", "pace": "conversational", "style": "straight-talking" },
+    "asset_reuse_bias": 0.3
+  },
+
+  "compliance": { "profile": "local_services", "regulated_claims": ["licence and insurance status", "pricing", "response time promises", "service area coverage"], "required_disclaimers": [{ "when": "price_quoted", "text": "Pricing shown is a typical range; final quote follows an on-site assessment.", "placement": "caption" }], "review_mode": "sampled" },
+
+  "kpis": [
+    { "metric": "calls_and_booked_jobs", "primary": true, "benchmark": null },
+    { "metric": "direction_requests", "primary": true, "benchmark": null },
+    { "metric": "cost_per_lead", "primary": true, "benchmark": null },
+    { "metric": "review_velocity", "primary": false, "benchmark": null }
+  ],
+
+  "capability_bindings": {
+    "produce.image.prompt": "prompt.image.compose.field_proof",
+    "assemble.video": "media.video.render.before_after",
+    "distribute.publish": "dist.publish.gbp"
+  },
+
+  "plays": [
+    {
+      "id": "job_of_the_week",
+      "title": "Job of the week",
+      "objective": "demand_gen",
+      "when": "A completed job produced usable before/after evidence. The default weekly heartbeat for this vertical.",
+      "steps": [
+        { "tag": "plan.brief" },
+        { "tag": "asset.search", "with": { "filter": "job_photos_last_7d" } },
+        { "tag": "produce.copy.short", "with": { "include": "town name, problem, fix, timeframe" } },
+        { "tag": "produce.image.edit", "with": { "op": "before_after_pair" } },
+        { "tag": "verify.compliance", "with": { "check": "licence number present, service area accurate" } },
+        { "tag": "distribute.publish", "with": { "fan_out": ["google_business", "instagram"] } },
+        { "tag": "asset.log" }
+      ],
+      "expected_kpi": "calls_and_booked_jobs"
+    },
+    {
+      "id": "weather_trigger",
+      "title": "Weather-triggered urgency",
+      "objective": "conversion",
+      "when": "A forecast threshold in the service area is crossed. Fires automatically from a schedule/webhook, not from a human request.",
+      "steps": [
+        { "tag": "plan.brief", "with": { "source": "weather_event" } },
+        { "tag": "asset.search", "with": { "filter": "seasonal_library" } },
+        { "tag": "produce.copy.short", "with": { "urgency": "high", "include": "same-day availability" } },
+        { "tag": "verify.compliance" },
+        { "tag": "distribute.publish", "with": { "schedule": "now", "fan_out": ["google_business", "instagram", "email"] } }
+      ],
+      "expected_kpi": "calls_and_booked_jobs"
+    },
+    {
+      "id": "review_request_loop",
+      "title": "Turn finished jobs into reviews",
+      "objective": "retention",
+      "when": "A job closed and the customer has not been asked.",
+      "steps": [
+        { "tag": "plan.brief", "with": { "source": "crm_event" } },
+        { "tag": "produce.copy.short", "with": { "channel": "email", "tone": "personal" } },
+        { "tag": "distribute.publish", "with": { "channel": "email" } },
+        { "tag": "measure.collect", "with": { "metric": "review_velocity" } }
+      ],
+      "expected_kpi": "review_velocity"
+    }
+  ],
+
+  "prompt_fragments": {
+    "voice": "Write the way a good technician talks to a homeowner at the door: what the problem is, what it costs, how soon you can be there. No marketing register at all.",
+    "proof_instruction": "Licence number, years in business, review count and a named neighbourhood outperform every adjective available to you.",
+    "visual_instruction": "Real site, real light, real workwear. The before and after must share framing and lens so the change is legible instantly.",
+    "geo_instruction": "Name the service area explicitly in every piece. Reach beyond the radius is spend with no possible return, and coverage claims outside it are a compliance block."
+  }
+}

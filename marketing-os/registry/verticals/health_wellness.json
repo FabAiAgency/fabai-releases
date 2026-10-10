@@ -1,0 +1,110 @@
+{
+  "id": "health_wellness",
+  "title": "Health, Wellness & Clinical",
+  "extends": "generic",
+  "description": "The vertical that proves the governance layer is real. Everything here is gated: claims, imagery, testimonials, targeting. Autonomy is capped below the tenant's own setting and the compliance profile cannot be switched off from a brief.",
+
+  "taxonomy": {
+    "offer_types": ["service", "product_physical", "subscription", "membership", "event"],
+    "buyer_type_default": "b2c_individual",
+    "buying_cycle_days": 21,
+    "decision_makers": ["the individual", "a partner or family member", "a referring practitioner"],
+    "purchase_triggers": ["a symptom that stopped being ignorable", "a diagnosis", "a life event", "a new year or a birthday", "a referral", "insurance or benefit reset"],
+    "geo_scope_default": "regional"
+  },
+
+  "message": {
+    "proof_types": ["certification", "testimonial", "case_study", "stat", "roster"],
+    "objection_library": ["is this evidence-based", "is the practitioner qualified", "will it hurt or have side effects", "is it covered", "how long until I notice anything", "is this just a wellness fad"],
+    "angle_library": ["what the evidence actually shows", "myth correction", "meet the practitioner", "what a first session is like", "who this is not for", "the mechanism explained plainly"],
+    "lexicon": {
+      "prefer": ["may help with", "in a study of", "typically", "ask your clinician", "qualified in"],
+      "avoid": ["miracle", "detox", "boost your immune system", "toxins"],
+      "banned": ["cures", "treats", "prevents disease", "guaranteed weight loss", "clinically proven", "doctor recommended"]
+    },
+    "tone_default": ["calm", "careful", "non-alarmist"],
+    "reading_level": 7
+  },
+
+  "channels": {
+    "weights": { "instagram": 0.25, "blog": 0.25, "google_business": 0.2, "email": 0.2, "youtube": 0.1 },
+    "formats": { "instagram": ["feed_image", "carousel", "reel"], "blog": ["article"], "google_business": ["update"], "email": ["broadcast"] },
+    "excluded": []
+  },
+
+  "creative": {
+    "image_style": "real people at realistic body diversity, calm natural light, clinical spaces that look clean but inhabited, no idealised or retouched bodies",
+    "image_negative": "before/after body comparison, idealised or retouched physique, white coat on an unqualified person, stethoscope as a prop, anatomical inaccuracy, distressed or suffering depiction",
+    "video_style": "practitioner explaining one concept calmly to camera, captions on, no dramatisation of symptoms",
+    "shot_grammar": ["the question people actually ask", "what is known", "what is not known", "what a first step looks like", "who to talk to"],
+    "aspect_ratios": ["4:5", "9:16", "1:1"],
+    "default_duration_s": 40,
+    "voice": { "gender": "neutral", "pace": "calm", "style": "reassuring" },
+    "asset_reuse_bias": 0.6
+  },
+
+  "compliance": {
+    "profile": "regulated_health",
+    "regulated_claims": ["any efficacy or outcome claim", "any disease reference", "practitioner credentials", "testimonial results", "before/after imagery"],
+    "required_disclaimers": [
+      { "when": "any_health_claim", "text": "This information is general and is not medical advice. Speak to a qualified clinician about your situation.", "placement": "in_creative_and_caption" },
+      { "when": "any_result_reference", "text": "Individual results vary.", "placement": "in_creative_and_caption" }
+    ],
+    "review_mode": "always",
+    "autonomy_ceiling": "publish_with_approval"
+  },
+
+  "kpis": [
+    { "metric": "consult_bookings", "primary": true, "benchmark": null },
+    { "metric": "qualified_enquiries", "primary": true, "benchmark": null },
+    { "metric": "saves_and_shares", "primary": false, "benchmark": 0.04 },
+    { "metric": "compliance_block_rate", "primary": false, "benchmark": 0.0, "note_ref": "Tracked as a KPI on purpose. A rising block rate means the content engine is drifting toward claims it cannot support." }
+  ],
+
+  "capability_bindings": { "verify.compliance": "verify.compliance.screen.strict" },
+
+  "plays": [
+    {
+      "id": "myth_correction",
+      "title": "Evidence-led myth correction",
+      "objective": "awareness",
+      "when": "A claim circulating in the category is wrong or overstated and correcting it is genuinely useful.",
+      "steps": [
+        { "tag": "plan.brief" },
+        { "tag": "research.market", "with": { "focus": "peer-reviewed and regulator sources only" } },
+        { "tag": "produce.copy.longform", "with": { "constraint": "state the strength of the evidence, including where it is weak" } },
+        { "tag": "produce.copy.short", "with": { "derive_from": "longform" } },
+        { "tag": "produce.image.prompt" },
+        { "tag": "produce.image" },
+        { "tag": "verify.compliance", "with": { "profile": "regulated_health" } },
+        { "tag": "approve.human", "with": { "reviewer": "clinical_reviewer" } },
+        { "tag": "distribute.publish" }
+      ],
+      "expected_kpi": "qualified_enquiries"
+    },
+    {
+      "id": "first_visit_explainer",
+      "title": "What a first appointment is actually like",
+      "objective": "conversion",
+      "when": "Enquiries stall before booking — the blocker is fear of the unknown, not price.",
+      "steps": [
+        { "tag": "plan.brief" },
+        { "tag": "produce.script", "with": { "constraint": "no symptom dramatisation" } },
+        { "tag": "produce.video.clip" },
+        { "tag": "produce.captions" },
+        { "tag": "assemble.video" },
+        { "tag": "verify.compliance" },
+        { "tag": "approve.human" },
+        { "tag": "distribute.publish" }
+      ],
+      "expected_kpi": "consult_bookings"
+    }
+  ],
+
+  "prompt_fragments": {
+    "voice": "Calm, careful, never alarmist. You are helping someone decide whether to ask a professional a question — not persuading them they are ill.",
+    "proof_instruction": "Cite the kind of evidence and its strength. Where evidence is limited, say so plainly. An honest limitation builds more trust here than a confident claim.",
+    "visual_instruction": "Real bodies, real light, no idealisation. Never generate before/after body comparisons. Never dress a person as a clinician unless the brief records their credentials.",
+    "compliance_instruction": "Never state or imply that anything diagnoses, treats, cures or prevents a condition. Required disclaimers are rendered in the creative itself, not only in the caption."
+  }
+}

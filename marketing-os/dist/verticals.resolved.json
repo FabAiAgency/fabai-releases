@@ -1,0 +1,2753 @@
+{
+  "generated": true,
+  "note": "Vertical profiles with their `extends` chains deep-merged at build time.",
+  "verticals": {
+    "generic": {
+      "$schema": "../../contracts/vertical-profile.schema.json",
+      "id": "generic",
+      "title": "Generic Commercial",
+      "extends": null,
+      "description": "The base every other profile inherits. If a behaviour belongs here it belongs to marketing itself, not to an industry. Anything industry-shaped that leaks into this file is a bug: it means a workflow was written against one client's reality.",
+      "taxonomy": {
+        "offer_types": [
+          "product_physical",
+          "product_digital",
+          "subscription",
+          "service",
+          "event",
+          "content",
+          "lead_magnet"
+        ],
+        "buyer_type_default": "b2c_individual",
+        "buying_cycle_days": 14,
+        "decision_makers": [],
+        "purchase_triggers": [
+          "problem becomes urgent",
+          "budget appears",
+          "competitor failure",
+          "seasonal moment",
+          "social proof reaches threshold"
+        ],
+        "geo_scope_default": "national",
+        "seasonality": []
+      },
+      "message": {
+        "proof_types": [
+          "testimonial",
+          "stat",
+          "demo",
+          "review_score",
+          "case_study"
+        ],
+        "objection_library": [
+          "too expensive",
+          "not the right time",
+          "we already have something",
+          "will it actually work for us",
+          "switching looks painful"
+        ],
+        "angle_library": [
+          "problem agitation",
+          "before and after",
+          "contrarian take",
+          "mechanism reveal",
+          "cost of inaction",
+          "social proof stack",
+          "founder story",
+          "comparison"
+        ],
+        "cta_ladder": [
+          {
+            "stage": "unaware",
+            "label": "Read the breakdown",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "problem_aware",
+            "label": "See how it works",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "solution_aware",
+            "label": "Compare options",
+            "commitment_level": "medium"
+          },
+          {
+            "stage": "product_aware",
+            "label": "Start now",
+            "commitment_level": "high"
+          },
+          {
+            "stage": "most_aware",
+            "label": "Get started today",
+            "commitment_level": "high"
+          }
+        ],
+        "lexicon": {
+          "prefer": [
+            "specific numbers",
+            "concrete nouns",
+            "second person"
+          ],
+          "avoid": [
+            "revolutionary",
+            "game-changing",
+            "unlock",
+            "in today's fast-paced world",
+            "elevate",
+            "seamless",
+            "leverage",
+            "delve"
+          ],
+          "banned": [
+            "guaranteed results",
+            "risk-free",
+            "#1 in the world",
+            "everyone is switching"
+          ]
+        },
+        "tone_default": [
+          "direct",
+          "concrete",
+          "confident without hype"
+        ],
+        "reading_level": 8
+      },
+      "channels": {
+        "weights": {
+          "linkedin": 0.2,
+          "blog": 0.2,
+          "email": 0.2,
+          "instagram": 0.15,
+          "x": 0.1,
+          "youtube": 0.1,
+          "tiktok": 0.05
+        },
+        "formats": {
+          "linkedin": [
+            "post",
+            "image"
+          ],
+          "blog": [
+            "article"
+          ],
+          "email": [
+            "broadcast"
+          ],
+          "instagram": [
+            "feed_image",
+            "reel"
+          ],
+          "youtube": [
+            "short"
+          ]
+        },
+        "excluded": []
+      },
+      "creative": {
+        "image_style": "clean, natural light, uncluttered composition, single clear subject, honest colour",
+        "image_negative": "stock-photo handshake, fake smiling team around a laptop, lens flare, cluttered collage, distorted text, extra fingers, watermark",
+        "video_style": "hook in the first 1.5 seconds, one idea per clip, captions always on",
+        "shot_grammar": [
+          "hook",
+          "problem",
+          "mechanism",
+          "proof",
+          "cta"
+        ],
+        "aspect_ratios": [
+          "1:1",
+          "9:16",
+          "16:9"
+        ],
+        "default_duration_s": 24,
+        "voice": {
+          "gender": "neutral",
+          "pace": "medium",
+          "style": "conversational"
+        },
+        "asset_reuse_bias": 0.5
+      },
+      "compliance": {
+        "profile": "standard",
+        "regulated_claims": [],
+        "required_disclaimers": [],
+        "review_mode": "sampled",
+        "autonomy_ceiling": "publish_with_approval"
+      },
+      "kpis": [
+        {
+          "metric": "engagement_rate",
+          "primary": false,
+          "benchmark": 0.03
+        },
+        {
+          "metric": "click_through_rate",
+          "primary": true,
+          "benchmark": 0.015
+        },
+        {
+          "metric": "cost_per_asset",
+          "primary": false,
+          "benchmark": null
+        }
+      ],
+      "capability_bindings": {},
+      "plays": [
+        {
+          "id": "single_post",
+          "title": "One post, one channel",
+          "objective": "awareness",
+          "when": "The request names a single piece of content and a single destination.",
+          "steps": [
+            {
+              "tag": "plan.brief"
+            },
+            {
+              "tag": "produce.copy.short"
+            },
+            {
+              "tag": "asset.search",
+              "parallel_group": "visual"
+            },
+            {
+              "tag": "produce.image.prompt",
+              "parallel_group": "visual"
+            },
+            {
+              "tag": "produce.image",
+              "parallel_group": "visual"
+            },
+            {
+              "tag": "verify.brand"
+            },
+            {
+              "tag": "verify.compliance"
+            },
+            {
+              "tag": "distribute.publish"
+            },
+            {
+              "tag": "asset.log"
+            }
+          ],
+          "expected_kpi": "engagement_rate"
+        },
+        {
+          "id": "pillar_and_shards",
+          "title": "Pillar article shredded into channel-native shards",
+          "objective": "demand_gen",
+          "when": "There is a substantive idea worth a long-form piece, and the brief names more than one channel.",
+          "steps": [
+            {
+              "tag": "plan.brief"
+            },
+            {
+              "tag": "research.market"
+            },
+            {
+              "tag": "produce.copy.longform"
+            },
+            {
+              "tag": "produce.copy.short",
+              "with": {
+                "derive_from": "longform",
+                "variants": 5
+              }
+            },
+            {
+              "tag": "produce.image.prompt",
+              "parallel_group": "visual"
+            },
+            {
+              "tag": "produce.image",
+              "parallel_group": "visual"
+            },
+            {
+              "tag": "verify.brand"
+            },
+            {
+              "tag": "verify.compliance"
+            },
+            {
+              "tag": "approve.human"
+            },
+            {
+              "tag": "distribute.publish",
+              "with": {
+                "fan_out": "per_channel"
+              }
+            },
+            {
+              "tag": "measure.collect"
+            }
+          ],
+          "expected_kpi": "click_through_rate"
+        },
+        {
+          "id": "short_form_video",
+          "title": "Short-form video from a standing start",
+          "objective": "awareness",
+          "when": "The brief asks for video, or the channel mix is weighted to vertical video.",
+          "steps": [
+            {
+              "tag": "plan.brief"
+            },
+            {
+              "tag": "produce.script"
+            },
+            {
+              "tag": "produce.image.prompt"
+            },
+            {
+              "tag": "produce.image"
+            },
+            {
+              "tag": "produce.video.clip",
+              "parallel_group": "media"
+            },
+            {
+              "tag": "produce.audio.vo",
+              "parallel_group": "media"
+            },
+            {
+              "tag": "produce.captions",
+              "parallel_group": "media"
+            },
+            {
+              "tag": "assemble.video"
+            },
+            {
+              "tag": "verify.brand"
+            },
+            {
+              "tag": "approve.human"
+            },
+            {
+              "tag": "distribute.publish"
+            },
+            {
+              "tag": "asset.log"
+            }
+          ],
+          "expected_kpi": "watch_through_rate"
+        },
+        {
+          "id": "repurpose_winner",
+          "title": "Repurpose a proven winner",
+          "objective": "conversion",
+          "when": "Measurement has identified an asset scoring in the top decile and its channel is not saturated.",
+          "steps": [
+            {
+              "tag": "measure.score"
+            },
+            {
+              "tag": "asset.search",
+              "with": {
+                "filter": "top_decile"
+              }
+            },
+            {
+              "tag": "produce.copy.short",
+              "with": {
+                "variants": 3,
+                "preserve": "angle"
+              }
+            },
+            {
+              "tag": "produce.image.edit"
+            },
+            {
+              "tag": "verify.brand"
+            },
+            {
+              "tag": "distribute.publish",
+              "with": {
+                "fan_out": "adjacent_channels"
+              }
+            }
+          ],
+          "expected_kpi": "conversion_rate"
+        }
+      ],
+      "prompt_fragments": {
+        "voice": "Write like a knowledgeable person talking to a peer. Short sentences. No throat-clearing. Lead with the most useful thing you know.",
+        "proof_instruction": "Every claim that could be doubted gets a specific: a number, a name, a timeframe, or a verifiable detail. If you have none, soften the claim rather than inventing a specific.",
+        "visual_instruction": "Describe one clear subject, the light, the surface and the framing. Do not describe text to be rendered inside the image — text is composited afterwards where it is legible and correct.",
+        "cta_instruction": "One call to action, matched to how aware the reader already is. Never stack two asks."
+      }
+    },
+    "b2b_saas": {
+      "$schema": "../../contracts/vertical-profile.schema.json",
+      "id": "b2b_saas",
+      "title": "B2B Software / Technology",
+      "extends": "generic",
+      "description": "Committee purchase, long cycle, the product is invisible. The creative problem is making an abstraction concrete without resorting to a screenshot nobody can read on a phone.",
+      "taxonomy": {
+        "offer_types": [
+          "subscription",
+          "product_digital",
+          "lead_magnet",
+          "event"
+        ],
+        "buyer_type_default": "b2b_midmarket",
+        "buying_cycle_days": 90,
+        "decision_makers": [
+          "end user / champion",
+          "department head (economic buyer)",
+          "IT / security",
+          "finance / procurement"
+        ],
+        "purchase_triggers": [
+          "a tool being replaced",
+          "headcount growth",
+          "a failed audit or incident",
+          "budget cycle",
+          "a new leader with a mandate"
+        ],
+        "geo_scope_default": "global",
+        "seasonality": []
+      },
+      "message": {
+        "proof_types": [
+          "case_study",
+          "stat",
+          "demo",
+          "certification",
+          "roster",
+          "press"
+        ],
+        "objection_library": [
+          "we can build this internally",
+          "migration will break things",
+          "security review will kill it",
+          "the team won't adopt it",
+          "we're locked into a contract",
+          "prove ROI before I ask for budget"
+        ],
+        "angle_library": [
+          "cost of the status quo",
+          "workflow before/after",
+          "mechanism reveal",
+          "the metric nobody is watching",
+          "integration story",
+          "security posture",
+          "adoption story from a peer company"
+        ],
+        "cta_ladder": [
+          {
+            "stage": "unaware",
+            "label": "Read the breakdown",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "problem_aware",
+            "label": "See how it works",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "solution_aware",
+            "label": "Compare options",
+            "commitment_level": "medium"
+          },
+          {
+            "stage": "product_aware",
+            "label": "Start now",
+            "commitment_level": "high"
+          },
+          {
+            "stage": "most_aware",
+            "label": "Get started today",
+            "commitment_level": "high"
+          }
+        ],
+        "lexicon": {
+          "prefer": [
+            "time saved per week",
+            "named integrations",
+            "role names",
+            "specific workflow verbs"
+          ],
+          "avoid": [
+            "end-to-end platform",
+            "AI-powered",
+            "next-generation",
+            "synergy",
+            "digital transformation",
+            "best-in-class"
+          ],
+          "banned": [
+            "guaranteed ROI",
+            "10x your revenue",
+            "replaces your whole team"
+          ]
+        },
+        "tone_default": [
+          "precise",
+          "peer-to-peer",
+          "low hype, high specificity"
+        ],
+        "reading_level": 10
+      },
+      "channels": {
+        "weights": {
+          "linkedin": 0.35,
+          "blog": 0.25,
+          "email": 0.2,
+          "instagram": 0.15,
+          "x": 0.1,
+          "youtube": 0.1,
+          "tiktok": 0.05
+        },
+        "formats": {
+          "linkedin": [
+            "post",
+            "document_carousel",
+            "video"
+          ],
+          "blog": [
+            "article"
+          ],
+          "email": [
+            "broadcast",
+            "sequence_step"
+          ],
+          "instagram": [
+            "feed_image",
+            "reel"
+          ],
+          "youtube": [
+            "long",
+            "short"
+          ]
+        },
+        "excluded": [
+          "tiktok",
+          "google_business"
+        ]
+      },
+      "creative": {
+        "image_style": "abstract-but-legible product metaphor, generous negative space, restrained two-colour palette, diagrammatic clarity, no literal dashboard screenshots",
+        "image_negative": "unreadable UI screenshot, stock businesspeople, glowing brain, circuit-board cliché, robot hand touching screen",
+        "video_style": "screen-recorded proof intercut with a narrated point; the demo IS the hook",
+        "shot_grammar": [
+          "problem stated as a workflow",
+          "the painful current step",
+          "the replacement step",
+          "the measured result",
+          "who it is for",
+          "cta"
+        ],
+        "aspect_ratios": [
+          "1:1",
+          "16:9",
+          "4:5"
+        ],
+        "default_duration_s": 45,
+        "voice": {
+          "gender": "neutral",
+          "pace": "brisk",
+          "style": "explanatory"
+        },
+        "asset_reuse_bias": 0.7
+      },
+      "compliance": {
+        "profile": "standard",
+        "regulated_claims": [
+          "security certification",
+          "uptime guarantee",
+          "customer count",
+          "ROI figures"
+        ],
+        "required_disclaimers": [],
+        "review_mode": "sampled",
+        "autonomy_ceiling": "publish_with_approval"
+      },
+      "kpis": [
+        {
+          "metric": "qualified_pipeline",
+          "primary": true,
+          "benchmark": null
+        },
+        {
+          "metric": "demo_requests",
+          "primary": true,
+          "benchmark": null
+        },
+        {
+          "metric": "click_through_rate",
+          "primary": false,
+          "benchmark": 0.012
+        },
+        {
+          "metric": "content_assisted_conversions",
+          "primary": false,
+          "benchmark": null
+        }
+      ],
+      "capability_bindings": {
+        "produce.image.prompt": "prompt.image.compose.ui_abstract",
+        "assemble.video": "media.video.render.explainer_wide"
+      },
+      "plays": [
+        {
+          "id": "objection_teardown",
+          "title": "Objection teardown series",
+          "objective": "demand_gen",
+          "when": "Sales reports a recurring objection, or win/loss data names a blocker.",
+          "steps": [
+            {
+              "tag": "plan.brief"
+            },
+            {
+              "tag": "research.market",
+              "with": {
+                "focus": "how competitors answer this objection"
+              }
+            },
+            {
+              "tag": "produce.copy.longform",
+              "with": {
+                "structure": "objection -> why it is reasonable -> the actual mechanics -> proof -> what to do next"
+              }
+            },
+            {
+              "tag": "produce.copy.short",
+              "with": {
+                "derive_from": "longform",
+                "variants": 4,
+                "channel": "linkedin"
+              }
+            },
+            {
+              "tag": "produce.image.prompt"
+            },
+            {
+              "tag": "produce.image"
+            },
+            {
+              "tag": "verify.brand"
+            },
+            {
+              "tag": "approve.human"
+            },
+            {
+              "tag": "distribute.publish",
+              "with": {
+                "fan_out": "per_channel"
+              }
+            },
+            {
+              "tag": "measure.collect"
+            }
+          ],
+          "expected_kpi": "qualified_pipeline"
+        },
+        {
+          "id": "customer_proof_engine",
+          "title": "Case study to multi-channel proof",
+          "objective": "conversion",
+          "when": "A customer result is verifiable and the customer has consented to be named.",
+          "steps": [
+            {
+              "tag": "plan.brief"
+            },
+            {
+              "tag": "research.product",
+              "with": {
+                "source": "crm_and_usage_data"
+              }
+            },
+            {
+              "tag": "produce.copy.longform",
+              "with": {
+                "structure": "case_study"
+              }
+            },
+            {
+              "tag": "produce.script",
+              "with": {
+                "duration_s": 45
+              }
+            },
+            {
+              "tag": "produce.video.clip"
+            },
+            {
+              "tag": "assemble.video"
+            },
+            {
+              "tag": "verify.compliance",
+              "with": {
+                "check": "customer consent on file"
+              }
+            },
+            {
+              "tag": "approve.human"
+            },
+            {
+              "tag": "distribute.publish"
+            }
+          ],
+          "expected_kpi": "demo_requests"
+        }
+      ],
+      "prompt_fragments": {
+        "voice": "You are writing for someone who evaluates tools for a living and has been disappointed before. Name the workflow, name the role, name the number. Skip the category-definition paragraph entirely.",
+        "proof_instruction": "Prefer a customer name and a measured delta over an adjective. If the metric is not in the brief, describe the mechanism instead of inventing a figure.",
+        "visual_instruction": "Render the CONCEPT of the workflow, not the interface. Diagrammatic, two accent colours maximum, wide margins, reads at thumbnail size.",
+        "cta_instruction": "One call to action, matched to how aware the reader already is. Never stack two asks.",
+        "objection_instruction": "Address the security and migration objections explicitly whenever the audience includes IT or procurement — silence on those reads as evasion."
+      }
+    },
+    "b2b_industrial": {
+      "$schema": "../../contracts/vertical-profile.schema.json",
+      "id": "b2b_industrial",
+      "title": "B2B Industrial / Manufacturing / Distribution",
+      "extends": "b2b_saas",
+      "description": "Long cycles, specification-driven buyers, distribution through reps and dealers. Inherits the committee mechanics of B2B software and replaces the aesthetic and the proof economy: here the spec sheet is the creative.",
+      "taxonomy": {
+        "offer_types": [
+          "product_physical",
+          "service",
+          "bundle",
+          "event"
+        ],
+        "buyer_type_default": "b2b_enterprise",
+        "buying_cycle_days": 180,
+        "decision_makers": [
+          "plant or operations engineer",
+          "maintenance lead",
+          "procurement",
+          "EHS / compliance officer",
+          "distributor or rep"
+        ],
+        "purchase_triggers": [
+          "unplanned downtime",
+          "a failed inspection",
+          "capacity expansion",
+          "a discontinued part",
+          "regulatory change",
+          "capital budget release"
+        ],
+        "geo_scope_default": "national",
+        "seasonality": [
+          {
+            "window": "capital_budget_q4",
+            "modifier": 1.6
+          },
+          {
+            "window": "trade_show_season",
+            "modifier": 1.8
+          }
+        ]
+      },
+      "message": {
+        "proof_types": [
+          "certification",
+          "stat",
+          "case_study",
+          "demo",
+          "warranty",
+          "award"
+        ],
+        "objection_library": [
+          "will it integrate with the line we already run",
+          "what is the lead time on spares",
+          "is it certified for our jurisdiction",
+          "what is the total cost including downtime to install",
+          "who services it locally",
+          "our people are trained on the incumbent"
+        ],
+        "angle_library": [
+          "downtime cost arithmetic",
+          "spec comparison",
+          "failure mode explained",
+          "the retrofit path",
+          "certification walkthrough",
+          "maintenance interval reality",
+          "total cost of ownership over 5 years"
+        ],
+        "cta_ladder": [
+          {
+            "stage": "unaware",
+            "label": "Read the breakdown",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "problem_aware",
+            "label": "See how it works",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "solution_aware",
+            "label": "Compare options",
+            "commitment_level": "medium"
+          },
+          {
+            "stage": "product_aware",
+            "label": "Start now",
+            "commitment_level": "high"
+          },
+          {
+            "stage": "most_aware",
+            "label": "Get started today",
+            "commitment_level": "high"
+          }
+        ],
+        "lexicon": {
+          "prefer": [
+            "tolerances",
+            "duty cycles",
+            "standards numbers",
+            "MTBF",
+            "lead times",
+            "part numbers"
+          ],
+          "avoid": [
+            "innovative solutions",
+            "cutting edge",
+            "partner of choice"
+          ],
+          "banned": [
+            "maintenance free",
+            "never fails",
+            "universally compatible"
+          ]
+        },
+        "tone_default": [
+          "technical",
+          "unadorned",
+          "respectful of the reader's expertise"
+        ],
+        "reading_level": 11
+      },
+      "channels": {
+        "weights": {
+          "linkedin": 0.3,
+          "blog": 0.25,
+          "email": 0.25,
+          "instagram": 0.15,
+          "x": 0.1,
+          "youtube": 0.15,
+          "tiktok": 0.05,
+          "product_listing": 0.05
+        },
+        "formats": {
+          "linkedin": [
+            "post",
+            "document_carousel"
+          ],
+          "blog": [
+            "article"
+          ],
+          "email": [
+            "broadcast",
+            "sequence_step"
+          ],
+          "instagram": [
+            "feed_image",
+            "reel"
+          ],
+          "youtube": [
+            "long"
+          ]
+        },
+        "excluded": [
+          "tiktok",
+          "instagram"
+        ]
+      },
+      "creative": {
+        "image_style": "equipment in a real operating environment, correct PPE on any person in frame, accurate machine geometry, industrial lighting, callout-friendly composition with space for annotation",
+        "image_negative": "missing PPE, impossible mechanical linkage, sparks used decoratively, unsafe working posture, sterile render with no context",
+        "video_style": "narrated walkthrough of the mechanism or the install, annotated on screen, shot from an operator's eyeline",
+        "shot_grammar": [
+          "failure or downtime scenario",
+          "the mechanism explained",
+          "spec callouts on screen",
+          "install or retrofit path",
+          "service and spares",
+          "who to contact"
+        ],
+        "aspect_ratios": [
+          "16:9",
+          "1:1"
+        ],
+        "default_duration_s": 75,
+        "voice": {
+          "gender": "neutral",
+          "pace": "measured",
+          "style": "technical narration"
+        },
+        "asset_reuse_bias": 0.8
+      },
+      "compliance": {
+        "profile": "standard",
+        "regulated_claims": [
+          "safety certification",
+          "performance ratings",
+          "emissions or efficiency figures",
+          "compatibility claims"
+        ],
+        "required_disclaimers": [],
+        "review_mode": "always",
+        "autonomy_ceiling": "publish_with_approval"
+      },
+      "kpis": [
+        {
+          "metric": "spec_sheet_downloads",
+          "primary": true,
+          "benchmark": null
+        },
+        {
+          "metric": "distributor_enquiries",
+          "primary": true,
+          "benchmark": null
+        },
+        {
+          "metric": "rfq_volume",
+          "primary": true,
+          "benchmark": null
+        },
+        {
+          "metric": "trade_show_meetings_booked",
+          "primary": false,
+          "benchmark": null
+        }
+      ],
+      "capability_bindings": {
+        "produce.image.prompt": "prompt.image.compose.field_proof",
+        "assemble.video": "media.video.render.explainer_wide"
+      },
+      "plays": [
+        {
+          "id": "downtime_arithmetic",
+          "title": "Downtime cost arithmetic",
+          "objective": "demand_gen",
+          "when": "The buyer's pain is measurable in hours of stopped production — the one argument procurement cannot dismiss.",
+          "steps": [
+            {
+              "tag": "plan.brief"
+            },
+            {
+              "tag": "research.product",
+              "with": {
+                "source": "spec_sheets_and_service_data"
+              }
+            },
+            {
+              "tag": "produce.copy.longform",
+              "with": {
+                "structure": "worked calculation with stated assumptions"
+              }
+            },
+            {
+              "tag": "produce.image",
+              "with": {
+                "set": "annotated_diagram"
+              }
+            },
+            {
+              "tag": "produce.copy.short",
+              "with": {
+                "derive_from": "longform",
+                "channel": "linkedin"
+              }
+            },
+            {
+              "tag": "verify.compliance",
+              "with": {
+                "check": "performance figures traceable to a spec sheet"
+              }
+            },
+            {
+              "tag": "approve.human"
+            },
+            {
+              "tag": "distribute.publish",
+              "with": {
+                "fan_out": "per_channel"
+              }
+            }
+          ],
+          "expected_kpi": "rfq_volume"
+        },
+        {
+          "id": "dealer_enablement",
+          "title": "Dealer / rep enablement pack",
+          "objective": "demand_gen",
+          "when": "Distribution partners need co-brandable material they will actually use.",
+          "steps": [
+            {
+              "tag": "plan.brief"
+            },
+            {
+              "tag": "produce.copy.longform",
+              "with": {
+                "structure": "one-pager per SKU"
+              }
+            },
+            {
+              "tag": "produce.image",
+              "with": {
+                "variants": 3,
+                "constraint": "leave co-brand space"
+              }
+            },
+            {
+              "tag": "verify.brand"
+            },
+            {
+              "tag": "approve.human"
+            },
+            {
+              "tag": "asset.store"
+            },
+            {
+              "tag": "distribute.publish",
+              "with": {
+                "channel": "email",
+                "audience": "dealer_list"
+              }
+            }
+          ],
+          "expected_kpi": "distributor_enquiries"
+        }
+      ],
+      "prompt_fragments": {
+        "voice": "Your reader maintains this equipment and will catch a wrong figure instantly. Use the units. State assumptions. Never round a tolerance to make a sentence flow.",
+        "proof_instruction": "Standards numbers, certification marks, duty cycles and service intervals are the proof. An adjective is a red flag to this audience.",
+        "visual_instruction": "Every person in frame wears the correct PPE for the environment shown. Mechanical geometry must be plausible; leave clear space for spec callouts.",
+        "cta_instruction": "One call to action, matched to how aware the reader already is. Never stack two asks.",
+        "objection_instruction": "Address the security and migration objections explicitly whenever the audience includes IT or procurement — silence on those reads as evasion.",
+        "safety_instruction": "Never depict an unsafe practice, even incidentally in the background. In this vertical it is both a compliance failure and an instant credibility loss."
+      }
+    },
+    "ecommerce_dtc": {
+      "$schema": "../../contracts/vertical-profile.schema.json",
+      "id": "ecommerce_dtc",
+      "title": "E-commerce / Direct-to-Consumer",
+      "extends": "generic",
+      "description": "Impulse-to-considered, visual-first, volume-hungry. The system's job here is variant throughput with brand consistency, and ruthless reuse of whatever is already converting.",
+      "taxonomy": {
+        "offer_types": [
+          "product_physical",
+          "bundle",
+          "subscription",
+          "marketplace_listing"
+        ],
+        "buyer_type_default": "b2c_individual",
+        "buying_cycle_days": 3,
+        "decision_makers": [],
+        "purchase_triggers": [
+          "scroll-stop moment",
+          "discount or bundle",
+          "restock",
+          "seasonal need",
+          "creator recommendation",
+          "abandoned cart reminder"
+        ],
+        "geo_scope_default": "national",
+        "seasonality": [
+          {
+            "window": "black_friday_cyber_monday",
+            "modifier": 3,
+            "note": "Creative must be locked and approved two weeks before — the approval queue is the bottleneck, not production."
+          },
+          {
+            "window": "q4_gifting",
+            "modifier": 2
+          },
+          {
+            "window": "new_year_reset",
+            "modifier": 1.4
+          },
+          {
+            "window": "summer_lull",
+            "modifier": 0.7
+          }
+        ]
+      },
+      "message": {
+        "proof_types": [
+          "review_score",
+          "before_after",
+          "testimonial",
+          "stat",
+          "press",
+          "warranty"
+        ],
+        "objection_library": [
+          "will it actually look like the photo",
+          "shipping cost and speed",
+          "returns hassle",
+          "is the quality worth the price",
+          "sizing/fit uncertainty",
+          "I can find it cheaper"
+        ],
+        "angle_library": [
+          "scroll-stopping demo",
+          "unboxing",
+          "problem/solution in 3 seconds",
+          "ingredient or material reveal",
+          "founder's reason",
+          "customer reaction",
+          "comparison to the cheap version",
+          "gift framing"
+        ],
+        "cta_ladder": [
+          {
+            "stage": "unaware",
+            "label": "Read the breakdown",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "problem_aware",
+            "label": "See how it works",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "solution_aware",
+            "label": "Compare options",
+            "commitment_level": "medium"
+          },
+          {
+            "stage": "product_aware",
+            "label": "Start now",
+            "commitment_level": "high"
+          },
+          {
+            "stage": "most_aware",
+            "label": "Get started today",
+            "commitment_level": "high"
+          }
+        ],
+        "lexicon": {
+          "prefer": [
+            "material names",
+            "measurements",
+            "sensory verbs",
+            "review quotes verbatim"
+          ],
+          "avoid": [
+            "luxury redefined",
+            "must-have",
+            "obsessed",
+            "literally everyone"
+          ],
+          "banned": [
+            "clinically proven",
+            "cures",
+            "permanent results",
+            "lowest price anywhere"
+          ]
+        },
+        "tone_default": [
+          "warm",
+          "fast",
+          "concrete"
+        ],
+        "reading_level": 6
+      },
+      "channels": {
+        "weights": {
+          "linkedin": 0.2,
+          "blog": 0.2,
+          "email": 0.2,
+          "instagram": 0.3,
+          "x": 0.1,
+          "youtube": 0.1,
+          "tiktok": 0.25,
+          "product_listing": 0.15,
+          "ads_meta": 0.1
+        },
+        "formats": {
+          "linkedin": [
+            "post",
+            "image"
+          ],
+          "blog": [
+            "article"
+          ],
+          "email": [
+            "broadcast"
+          ],
+          "instagram": [
+            "reel",
+            "feed_image",
+            "carousel",
+            "story"
+          ],
+          "youtube": [
+            "short"
+          ],
+          "tiktok": [
+            "video"
+          ],
+          "product_listing": [
+            "pdp_copy",
+            "gallery",
+            "a_plus"
+          ]
+        },
+        "excluded": []
+      },
+      "creative": {
+        "image_style": "product hero on a clean surface with soft directional light, plus a lifestyle-in-use frame; true-to-life colour, visible texture and material",
+        "image_negative": "impossible product geometry, misspelt packaging text, floating shadowless product, over-smoothed plastic look, wrong count of items",
+        "video_style": "UGC-native: handheld, spoken to camera, product in hand within the first second, hard cuts, on-screen text carrying the claim",
+        "shot_grammar": [
+          "hook in hand",
+          "problem it solves",
+          "close-up texture/detail",
+          "in-use moment",
+          "result",
+          "offer + cta"
+        ],
+        "aspect_ratios": [
+          "9:16",
+          "1:1",
+          "4:5"
+        ],
+        "default_duration_s": 21,
+        "voice": {
+          "gender": "neutral",
+          "pace": "fast",
+          "style": "enthusiastic-but-real"
+        },
+        "asset_reuse_bias": 0.35
+      },
+      "compliance": {
+        "profile": "standard",
+        "regulated_claims": [
+          "health benefit",
+          "sustainability claim",
+          "country of origin",
+          "comparative pricing"
+        ],
+        "required_disclaimers": [],
+        "review_mode": "sampled",
+        "autonomy_ceiling": "publish_with_approval"
+      },
+      "kpis": [
+        {
+          "metric": "roas",
+          "primary": true,
+          "benchmark": 2.5
+        },
+        {
+          "metric": "thumb_stop_rate",
+          "primary": true,
+          "benchmark": 0.3
+        },
+        {
+          "metric": "add_to_cart_rate",
+          "primary": false,
+          "benchmark": 0.08
+        },
+        {
+          "metric": "cost_per_acquisition",
+          "primary": true,
+          "benchmark": null
+        }
+      ],
+      "capability_bindings": {
+        "produce.image.prompt": "prompt.image.compose.product_studio",
+        "assemble.video": "media.video.render.ugc_vertical",
+        "research.product": "research.product.catalog"
+      },
+      "plays": [
+        {
+          "id": "variant_swarm",
+          "title": "Variant swarm for paid testing",
+          "objective": "conversion",
+          "when": "A product needs creative volume for a paid test, or an existing angle is fatiguing.",
+          "steps": [
+            {
+              "tag": "plan.brief"
+            },
+            {
+              "tag": "research.product",
+              "with": {
+                "source": "catalog_and_reviews"
+              }
+            },
+            {
+              "tag": "produce.script",
+              "with": {
+                "variants": 5,
+                "vary": "hook_only"
+              }
+            },
+            {
+              "tag": "asset.search",
+              "with": {
+                "filter": "same_sku"
+              },
+              "parallel_group": "media"
+            },
+            {
+              "tag": "produce.image",
+              "parallel_group": "media"
+            },
+            {
+              "tag": "produce.video.clip",
+              "parallel_group": "media"
+            },
+            {
+              "tag": "assemble.video",
+              "with": {
+                "variants": 5
+              }
+            },
+            {
+              "tag": "verify.brand"
+            },
+            {
+              "tag": "approve.human",
+              "with": {
+                "mode": "batch_review"
+              }
+            },
+            {
+              "tag": "distribute.publish"
+            },
+            {
+              "tag": "measure.collect",
+              "with": {
+                "window_days": 7
+              }
+            },
+            {
+              "tag": "measure.score"
+            },
+            {
+              "tag": "learn.update"
+            }
+          ],
+          "expected_kpi": "roas"
+        },
+        {
+          "id": "review_to_creative",
+          "title": "Mine reviews, make the ad",
+          "objective": "conversion",
+          "when": "A SKU has 25+ reviews. Customers have already written the copy.",
+          "steps": [
+            {
+              "tag": "research.product",
+              "with": {
+                "source": "reviews",
+                "extract": "recurring phrases, objections answered, surprise delights"
+              }
+            },
+            {
+              "tag": "plan.brief"
+            },
+            {
+              "tag": "produce.copy.short",
+              "with": {
+                "constraint": "use customer phrasing verbatim where possible"
+              }
+            },
+            {
+              "tag": "produce.image.prompt"
+            },
+            {
+              "tag": "produce.image"
+            },
+            {
+              "tag": "verify.compliance",
+              "with": {
+                "check": "testimonial is real and attributable"
+              }
+            },
+            {
+              "tag": "distribute.publish"
+            }
+          ],
+          "expected_kpi": "add_to_cart_rate"
+        },
+        {
+          "id": "listing_uplift",
+          "title": "PDP and listing refresh",
+          "objective": "conversion",
+          "when": "Traffic is healthy but conversion on the listing is below benchmark.",
+          "steps": [
+            {
+              "tag": "research.product",
+              "with": {
+                "source": "catalog_and_competitor_listings"
+              }
+            },
+            {
+              "tag": "produce.copy.longform",
+              "with": {
+                "structure": "pdp",
+                "constraint": "structured attributes first"
+              }
+            },
+            {
+              "tag": "produce.image",
+              "with": {
+                "variants": 6,
+                "set": "gallery"
+              }
+            },
+            {
+              "tag": "verify.compliance"
+            },
+            {
+              "tag": "approve.human"
+            },
+            {
+              "tag": "distribute.publish",
+              "with": {
+                "channel": "product_listing"
+              }
+            }
+          ],
+          "expected_kpi": "add_to_cart_rate"
+        }
+      ],
+      "prompt_fragments": {
+        "voice": "Talk like a friend who owns the thing and is showing it to you. First sentence earns the second. No brand poetry.",
+        "proof_instruction": "Lead with what a real customer said or a measurable property (weight, dimensions, material, wash count, battery hours).",
+        "visual_instruction": "The product must be unmistakable, correctly proportioned and the right colour. Prefer one product per frame. Never render brand names or packaging copy as image text.",
+        "cta_instruction": "One call to action, matched to how aware the reader already is. Never stack two asks.",
+        "hook_instruction": "The first 1.5 seconds must contain motion and the product. A talking head with no product in frame is a failed hook."
+      }
+    },
+    "health_wellness": {
+      "$schema": "../../contracts/vertical-profile.schema.json",
+      "id": "health_wellness",
+      "title": "Health, Wellness & Clinical",
+      "extends": "generic",
+      "description": "The vertical that proves the governance layer is real. Everything here is gated: claims, imagery, testimonials, targeting. Autonomy is capped below the tenant's own setting and the compliance profile cannot be switched off from a brief.",
+      "taxonomy": {
+        "offer_types": [
+          "service",
+          "product_physical",
+          "subscription",
+          "membership",
+          "event"
+        ],
+        "buyer_type_default": "b2c_individual",
+        "buying_cycle_days": 21,
+        "decision_makers": [
+          "the individual",
+          "a partner or family member",
+          "a referring practitioner"
+        ],
+        "purchase_triggers": [
+          "a symptom that stopped being ignorable",
+          "a diagnosis",
+          "a life event",
+          "a new year or a birthday",
+          "a referral",
+          "insurance or benefit reset"
+        ],
+        "geo_scope_default": "regional",
+        "seasonality": []
+      },
+      "message": {
+        "proof_types": [
+          "certification",
+          "testimonial",
+          "case_study",
+          "stat",
+          "roster"
+        ],
+        "objection_library": [
+          "is this evidence-based",
+          "is the practitioner qualified",
+          "will it hurt or have side effects",
+          "is it covered",
+          "how long until I notice anything",
+          "is this just a wellness fad"
+        ],
+        "angle_library": [
+          "what the evidence actually shows",
+          "myth correction",
+          "meet the practitioner",
+          "what a first session is like",
+          "who this is not for",
+          "the mechanism explained plainly"
+        ],
+        "cta_ladder": [
+          {
+            "stage": "unaware",
+            "label": "Read the breakdown",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "problem_aware",
+            "label": "See how it works",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "solution_aware",
+            "label": "Compare options",
+            "commitment_level": "medium"
+          },
+          {
+            "stage": "product_aware",
+            "label": "Start now",
+            "commitment_level": "high"
+          },
+          {
+            "stage": "most_aware",
+            "label": "Get started today",
+            "commitment_level": "high"
+          }
+        ],
+        "lexicon": {
+          "prefer": [
+            "may help with",
+            "in a study of",
+            "typically",
+            "ask your clinician",
+            "qualified in"
+          ],
+          "avoid": [
+            "miracle",
+            "detox",
+            "boost your immune system",
+            "toxins"
+          ],
+          "banned": [
+            "cures",
+            "treats",
+            "prevents disease",
+            "guaranteed weight loss",
+            "clinically proven",
+            "doctor recommended"
+          ]
+        },
+        "tone_default": [
+          "calm",
+          "careful",
+          "non-alarmist"
+        ],
+        "reading_level": 7
+      },
+      "channels": {
+        "weights": {
+          "linkedin": 0.2,
+          "blog": 0.25,
+          "email": 0.2,
+          "instagram": 0.25,
+          "x": 0.1,
+          "youtube": 0.1,
+          "tiktok": 0.05,
+          "google_business": 0.2
+        },
+        "formats": {
+          "linkedin": [
+            "post",
+            "image"
+          ],
+          "blog": [
+            "article"
+          ],
+          "email": [
+            "broadcast"
+          ],
+          "instagram": [
+            "feed_image",
+            "carousel",
+            "reel"
+          ],
+          "youtube": [
+            "short"
+          ],
+          "google_business": [
+            "update"
+          ]
+        },
+        "excluded": []
+      },
+      "creative": {
+        "image_style": "real people at realistic body diversity, calm natural light, clinical spaces that look clean but inhabited, no idealised or retouched bodies",
+        "image_negative": "before/after body comparison, idealised or retouched physique, white coat on an unqualified person, stethoscope as a prop, anatomical inaccuracy, distressed or suffering depiction",
+        "video_style": "practitioner explaining one concept calmly to camera, captions on, no dramatisation of symptoms",
+        "shot_grammar": [
+          "the question people actually ask",
+          "what is known",
+          "what is not known",
+          "what a first step looks like",
+          "who to talk to"
+        ],
+        "aspect_ratios": [
+          "4:5",
+          "9:16",
+          "1:1"
+        ],
+        "default_duration_s": 40,
+        "voice": {
+          "gender": "neutral",
+          "pace": "calm",
+          "style": "reassuring"
+        },
+        "asset_reuse_bias": 0.6
+      },
+      "compliance": {
+        "profile": "regulated_health",
+        "regulated_claims": [
+          "any efficacy or outcome claim",
+          "any disease reference",
+          "practitioner credentials",
+          "testimonial results",
+          "before/after imagery"
+        ],
+        "required_disclaimers": [
+          {
+            "when": "any_health_claim",
+            "text": "This information is general and is not medical advice. Speak to a qualified clinician about your situation.",
+            "placement": "in_creative_and_caption"
+          },
+          {
+            "when": "any_result_reference",
+            "text": "Individual results vary.",
+            "placement": "in_creative_and_caption"
+          }
+        ],
+        "review_mode": "always",
+        "autonomy_ceiling": "publish_with_approval"
+      },
+      "kpis": [
+        {
+          "metric": "consult_bookings",
+          "primary": true,
+          "benchmark": null
+        },
+        {
+          "metric": "qualified_enquiries",
+          "primary": true,
+          "benchmark": null
+        },
+        {
+          "metric": "saves_and_shares",
+          "primary": false,
+          "benchmark": 0.04
+        },
+        {
+          "metric": "compliance_block_rate",
+          "primary": false,
+          "benchmark": 0,
+          "note_ref": "Tracked as a KPI on purpose. A rising block rate means the content engine is drifting toward claims it cannot support."
+        }
+      ],
+      "capability_bindings": {
+        "verify.compliance": "verify.compliance.screen.strict"
+      },
+      "plays": [
+        {
+          "id": "myth_correction",
+          "title": "Evidence-led myth correction",
+          "objective": "awareness",
+          "when": "A claim circulating in the category is wrong or overstated and correcting it is genuinely useful.",
+          "steps": [
+            {
+              "tag": "plan.brief"
+            },
+            {
+              "tag": "research.market",
+              "with": {
+                "focus": "peer-reviewed and regulator sources only"
+              }
+            },
+            {
+              "tag": "produce.copy.longform",
+              "with": {
+                "constraint": "state the strength of the evidence, including where it is weak"
+              }
+            },
+            {
+              "tag": "produce.copy.short",
+              "with": {
+                "derive_from": "longform"
+              }
+            },
+            {
+              "tag": "produce.image.prompt"
+            },
+            {
+              "tag": "produce.image"
+            },
+            {
+              "tag": "verify.compliance",
+              "with": {
+                "profile": "regulated_health"
+              }
+            },
+            {
+              "tag": "approve.human",
+              "with": {
+                "reviewer": "clinical_reviewer"
+              }
+            },
+            {
+              "tag": "distribute.publish"
+            }
+          ],
+          "expected_kpi": "qualified_enquiries"
+        },
+        {
+          "id": "first_visit_explainer",
+          "title": "What a first appointment is actually like",
+          "objective": "conversion",
+          "when": "Enquiries stall before booking — the blocker is fear of the unknown, not price.",
+          "steps": [
+            {
+              "tag": "plan.brief"
+            },
+            {
+              "tag": "produce.script",
+              "with": {
+                "constraint": "no symptom dramatisation"
+              }
+            },
+            {
+              "tag": "produce.video.clip"
+            },
+            {
+              "tag": "produce.captions"
+            },
+            {
+              "tag": "assemble.video"
+            },
+            {
+              "tag": "verify.compliance"
+            },
+            {
+              "tag": "approve.human"
+            },
+            {
+              "tag": "distribute.publish"
+            }
+          ],
+          "expected_kpi": "consult_bookings"
+        }
+      ],
+      "prompt_fragments": {
+        "voice": "Calm, careful, never alarmist. You are helping someone decide whether to ask a professional a question — not persuading them they are ill.",
+        "proof_instruction": "Cite the kind of evidence and its strength. Where evidence is limited, say so plainly. An honest limitation builds more trust here than a confident claim.",
+        "visual_instruction": "Real bodies, real light, no idealisation. Never generate before/after body comparisons. Never dress a person as a clinician unless the brief records their credentials.",
+        "cta_instruction": "One call to action, matched to how aware the reader already is. Never stack two asks.",
+        "compliance_instruction": "Never state or imply that anything diagnoses, treats, cures or prevents a condition. Required disclaimers are rendered in the creative itself, not only in the caption."
+      }
+    },
+    "home_goods": {
+      "$schema": "../../contracts/vertical-profile.schema.json",
+      "id": "home_goods",
+      "title": "Home Goods / Furniture / Interiors",
+      "extends": "ecommerce_dtc",
+      "description": "A physical-goods vertical that behaves nothing like fast DTC: high ticket, long deliberation, spatial imagination, and a return that costs a freight shipment. Inherits e-commerce mechanics, overrides the psychology.",
+      "taxonomy": {
+        "offer_types": [
+          "product_physical",
+          "bundle",
+          "service"
+        ],
+        "buyer_type_default": "b2c_household",
+        "buying_cycle_days": 45,
+        "decision_makers": [
+          "primary shopper",
+          "partner / household veto",
+          "installer or designer"
+        ],
+        "purchase_triggers": [
+          "move or renovation",
+          "a thing broke",
+          "seasonal refresh",
+          "hosting deadline",
+          "a room that never worked",
+          "sale on a saved item"
+        ],
+        "geo_scope_default": "national",
+        "seasonality": [
+          {
+            "window": "spring_refresh",
+            "modifier": 1.6
+          },
+          {
+            "window": "labor_day_and_president_day_sales",
+            "modifier": 2.2,
+            "note": "Furniture's real peaks are the mattress-and-sofa sale weekends, not BFCM."
+          },
+          {
+            "window": "pre_holiday_hosting",
+            "modifier": 1.8
+          },
+          {
+            "window": "january_organisation",
+            "modifier": 1.5
+          }
+        ]
+      },
+      "message": {
+        "proof_types": [
+          "before_after",
+          "review_score",
+          "warranty",
+          "certification",
+          "testimonial",
+          "press"
+        ],
+        "objection_library": [
+          "will it fit the room",
+          "will it match what I already own",
+          "is it comfortable / does it feel cheap",
+          "delivery and assembly hassle",
+          "what if it doesn't work — return cost",
+          "is it durable with kids or pets",
+          "lead time is months"
+        ],
+        "angle_library": [
+          "room transformation",
+          "the measurement problem solved",
+          "material deep-dive",
+          "how it lives with kids/pets",
+          "small-space solution",
+          "designer's reasoning",
+          "one piece, five ways",
+          "the cheap version vs this"
+        ],
+        "cta_ladder": [
+          {
+            "stage": "unaware",
+            "label": "Read the breakdown",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "problem_aware",
+            "label": "See how it works",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "solution_aware",
+            "label": "Compare options",
+            "commitment_level": "medium"
+          },
+          {
+            "stage": "product_aware",
+            "label": "Start now",
+            "commitment_level": "high"
+          },
+          {
+            "stage": "most_aware",
+            "label": "Get started today",
+            "commitment_level": "high"
+          }
+        ],
+        "lexicon": {
+          "prefer": [
+            "exact dimensions",
+            "material and fill",
+            "weight capacity",
+            "care instructions",
+            "lead time in weeks",
+            "room type"
+          ],
+          "avoid": [
+            "curated",
+            "elevate your space",
+            "effortless luxury",
+            "statement piece"
+          ],
+          "banned": [
+            "lasts forever",
+            "indestructible",
+            "free delivery"
+          ]
+        },
+        "tone_default": [
+          "warm",
+          "practical",
+          "design-literate without jargon"
+        ],
+        "reading_level": 7
+      },
+      "channels": {
+        "weights": {
+          "linkedin": 0.2,
+          "blog": 0.15,
+          "email": 0.2,
+          "instagram": 0.28,
+          "x": 0.1,
+          "youtube": 0.12,
+          "tiktok": 0.1,
+          "product_listing": 0.15,
+          "ads_meta": 0.1
+        },
+        "formats": {
+          "linkedin": [
+            "post",
+            "image"
+          ],
+          "blog": [
+            "article"
+          ],
+          "email": [
+            "broadcast"
+          ],
+          "instagram": [
+            "carousel",
+            "feed_image",
+            "reel"
+          ],
+          "youtube": [
+            "long",
+            "short"
+          ],
+          "tiktok": [
+            "video"
+          ],
+          "product_listing": [
+            "pdp_copy",
+            "gallery"
+          ]
+        },
+        "excluded": []
+      },
+      "creative": {
+        "image_style": "styled interior with believable daylight from a real window direction, accurate scale against human-sized reference objects, honest material texture (grain, weave, stitch), lived-in not showroom-sterile",
+        "image_negative": "impossible room geometry, furniture floating off the floor, doorways to nowhere, warped perspective, inconsistent light direction, plants that defy gravity, mismatched shadow angles",
+        "video_style": "slow considered camera movement, room-scale reveal, close-ups on material and joinery, real hands using the piece",
+        "shot_grammar": [
+          "the room's problem",
+          "wide reveal with the piece in place",
+          "scale reference with a person",
+          "material close-up",
+          "detail that justifies the price",
+          "how it handles real life",
+          "cta with dimensions on screen"
+        ],
+        "aspect_ratios": [
+          "4:5",
+          "1:1",
+          "9:16",
+          "16:9"
+        ],
+        "default_duration_s": 30,
+        "voice": {
+          "gender": "neutral",
+          "pace": "measured",
+          "style": "calm and reassuring"
+        },
+        "asset_reuse_bias": 0.55
+      },
+      "compliance": {
+        "profile": "standard",
+        "regulated_claims": [
+          "fire retardancy",
+          "sustainability and FSC claims",
+          "country of origin",
+          "warranty terms",
+          "delivery timeframes"
+        ],
+        "required_disclaimers": [],
+        "review_mode": "sampled",
+        "autonomy_ceiling": "publish_with_approval"
+      },
+      "kpis": [
+        {
+          "metric": "assisted_revenue",
+          "primary": true,
+          "benchmark": null
+        },
+        {
+          "metric": "saves_and_shares",
+          "primary": true,
+          "benchmark": 0.05,
+          "note_ref": "In long-cycle home goods, saves predict revenue better than clicks do."
+        },
+        {
+          "metric": "return_rate",
+          "primary": false,
+          "benchmark": 0.08
+        },
+        {
+          "metric": "add_to_cart_rate",
+          "primary": false,
+          "benchmark": 0.04
+        }
+      ],
+      "capability_bindings": {
+        "produce.image.prompt": "prompt.image.compose.lifestyle_room",
+        "assemble.video": "media.video.render.explainer_wide",
+        "research.product": "research.product.catalog"
+      },
+      "plays": [
+        {
+          "id": "room_transformation",
+          "title": "Before/after room transformation",
+          "objective": "demand_gen",
+          "when": "The piece is best understood in context, or the SKU has a weak standalone hero shot.",
+          "steps": [
+            {
+              "tag": "plan.brief"
+            },
+            {
+              "tag": "asset.search",
+              "with": {
+                "filter": "same_sku_or_room_type"
+              }
+            },
+            {
+              "tag": "produce.image.prompt",
+              "with": {
+                "pair": "before_and_after",
+                "lock": "room geometry and light direction across both frames"
+              }
+            },
+            {
+              "tag": "produce.image",
+              "with": {
+                "variants": 2
+              }
+            },
+            {
+              "tag": "produce.copy.short",
+              "with": {
+                "include": "dimensions and lead time"
+              }
+            },
+            {
+              "tag": "verify.brand"
+            },
+            {
+              "tag": "distribute.publish",
+              "with": {
+                "fan_out": "per_channel"
+              }
+            },
+            {
+              "tag": "asset.log"
+            }
+          ],
+          "expected_kpi": "saves_and_shares"
+        },
+        {
+          "id": "fit_and_measure",
+          "title": "Answer the measurement objection",
+          "objective": "conversion",
+          "when": "Return data or support tickets point at sizing and fit.",
+          "steps": [
+            {
+              "tag": "research.product",
+              "with": {
+                "source": "catalog_dimensions_and_returns_reasons"
+              }
+            },
+            {
+              "tag": "produce.copy.longform",
+              "with": {
+                "structure": "measuring guide"
+              }
+            },
+            {
+              "tag": "produce.image",
+              "with": {
+                "set": "scale_diagram",
+                "variants": 3
+              }
+            },
+            {
+              "tag": "produce.copy.short",
+              "with": {
+                "derive_from": "longform"
+              }
+            },
+            {
+              "tag": "verify.compliance"
+            },
+            {
+              "tag": "distribute.publish"
+            }
+          ],
+          "expected_kpi": "return_rate"
+        }
+      ],
+      "prompt_fragments": {
+        "voice": "Speak like a shop owner who knows the joinery and also knows the buyer has a tape measure and a partner to convince. Practical reassurance beats aspiration.",
+        "proof_instruction": "Dimensions, materials, weight capacity, warranty length and lead time are proof. Use them early — they are the objections in disguise.",
+        "visual_instruction": "Keep one consistent light direction and one consistent room geometry across every frame in a set. Include a human-scale reference. Material texture must be visible at 100% crop.",
+        "cta_instruction": "One call to action, matched to how aware the reader already is. Never stack two asks.",
+        "hook_instruction": "The first 1.5 seconds must contain motion and the product. A talking head with no product in frame is a failed hook.",
+        "objection_instruction": "Name the fit, delivery and durability questions before the buyer has to ask. In this category, unanswered logistics is the number one reason a saved item never converts."
+      }
+    },
+    "local_services": {
+      "$schema": "../../contracts/vertical-profile.schema.json",
+      "id": "local_services",
+      "title": "Local & Home Services (trades, clinics, salons, fitness)",
+      "extends": "generic",
+      "description": "Geographically bounded, trust-gated, often urgent. Reach outside the service radius is waste, and the highest-leverage channel is the one generic tooling forgets: the map listing.",
+      "taxonomy": {
+        "offer_types": [
+          "service",
+          "event",
+          "membership",
+          "lead_magnet"
+        ],
+        "buyer_type_default": "b2c_household",
+        "buying_cycle_days": 2,
+        "decision_makers": [
+          "homeowner or household decision maker"
+        ],
+        "purchase_triggers": [
+          "something broke",
+          "a seasonal changeover",
+          "an inspection or move",
+          "a recommendation from a neighbour",
+          "a competitor no-showed"
+        ],
+        "geo_scope_default": "radius",
+        "seasonality": [
+          {
+            "window": "first_cold_snap",
+            "modifier": 3,
+            "note": "Heating demand spikes within 48 hours of the first freeze. Creative must already be in the queue, not being briefed."
+          },
+          {
+            "window": "first_heat_wave",
+            "modifier": 3
+          },
+          {
+            "window": "spring_storm_season",
+            "modifier": 2
+          },
+          {
+            "window": "pre_holiday_hosting",
+            "modifier": 1.4
+          }
+        ]
+      },
+      "message": {
+        "proof_types": [
+          "review_score",
+          "certification",
+          "before_after",
+          "testimonial",
+          "warranty",
+          "roster"
+        ],
+        "objection_library": [
+          "are they licensed and insured",
+          "will they show up when they say",
+          "will the price change once they're here",
+          "how fast can they come",
+          "do they cover my area",
+          "will they upsell me something I don't need"
+        ],
+        "angle_library": [
+          "job of the week",
+          "the honest price breakdown",
+          "what a bad repair looks like",
+          "meet the technician",
+          "emergency availability",
+          "seasonal maintenance reminder",
+          "neighbour's review"
+        ],
+        "cta_ladder": [
+          {
+            "stage": "unaware",
+            "label": "Read the breakdown",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "problem_aware",
+            "label": "See how it works",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "solution_aware",
+            "label": "Compare options",
+            "commitment_level": "medium"
+          },
+          {
+            "stage": "product_aware",
+            "label": "Start now",
+            "commitment_level": "high"
+          },
+          {
+            "stage": "most_aware",
+            "label": "Get started today",
+            "commitment_level": "high"
+          }
+        ],
+        "lexicon": {
+          "prefer": [
+            "neighbourhood and town names",
+            "response time in hours",
+            "licence number",
+            "upfront pricing language",
+            "years in business"
+          ],
+          "avoid": [
+            "world-class",
+            "unparalleled",
+            "trusted partner"
+          ],
+          "banned": [
+            "free estimate"
+          ],
+          "note": "`free estimate` is banned only where local rules restrict it — the compliance profile decides; the lexicon flags it for screening."
+        },
+        "tone_default": [
+          "plain-spoken",
+          "reassuring",
+          "local"
+        ],
+        "reading_level": 6
+      },
+      "channels": {
+        "weights": {
+          "linkedin": 0.2,
+          "blog": 0.15,
+          "email": 0.15,
+          "instagram": 0.2,
+          "x": 0.1,
+          "youtube": 0.1,
+          "tiktok": 0.1,
+          "google_business": 0.3,
+          "ads_meta": 0.1
+        },
+        "formats": {
+          "linkedin": [
+            "post",
+            "image"
+          ],
+          "blog": [
+            "article"
+          ],
+          "email": [
+            "broadcast"
+          ],
+          "instagram": [
+            "reel",
+            "feed_image",
+            "story"
+          ],
+          "youtube": [
+            "short"
+          ],
+          "google_business": [
+            "update",
+            "offer",
+            "event"
+          ]
+        },
+        "excluded": [
+          "linkedin",
+          "x"
+        ]
+      },
+      "creative": {
+        "image_style": "real work in a real property, natural available light, identifiable local context, technician in branded workwear, honest and un-retouched",
+        "image_negative": "generic stock tradesperson, impossibly clean work site, staged handshake, tools held wrongly, branding that misspells the company name",
+        "video_style": "phone-shot from the job, narrated by the person who did the work, before and after in the same framing",
+        "shot_grammar": [
+          "the problem on site",
+          "what caused it",
+          "the fix in progress",
+          "the finished result in the same framing as the problem",
+          "what it cost and how fast",
+          "service area + call to action"
+        ],
+        "aspect_ratios": [
+          "9:16",
+          "1:1"
+        ],
+        "default_duration_s": 27,
+        "voice": {
+          "gender": "neutral",
+          "pace": "conversational",
+          "style": "straight-talking"
+        },
+        "asset_reuse_bias": 0.3
+      },
+      "compliance": {
+        "profile": "local_services",
+        "regulated_claims": [
+          "licence and insurance status",
+          "pricing",
+          "response time promises",
+          "service area coverage"
+        ],
+        "required_disclaimers": [
+          {
+            "when": "price_quoted",
+            "text": "Pricing shown is a typical range; final quote follows an on-site assessment.",
+            "placement": "caption"
+          }
+        ],
+        "review_mode": "sampled",
+        "autonomy_ceiling": "publish_with_approval"
+      },
+      "kpis": [
+        {
+          "metric": "calls_and_booked_jobs",
+          "primary": true,
+          "benchmark": null
+        },
+        {
+          "metric": "direction_requests",
+          "primary": true,
+          "benchmark": null
+        },
+        {
+          "metric": "cost_per_lead",
+          "primary": true,
+          "benchmark": null
+        },
+        {
+          "metric": "review_velocity",
+          "primary": false,
+          "benchmark": null
+        }
+      ],
+      "capability_bindings": {
+        "produce.image.prompt": "prompt.image.compose.field_proof",
+        "assemble.video": "media.video.render.before_after",
+        "distribute.publish": "dist.publish.gbp"
+      },
+      "plays": [
+        {
+          "id": "job_of_the_week",
+          "title": "Job of the week",
+          "objective": "demand_gen",
+          "when": "A completed job produced usable before/after evidence. The default weekly heartbeat for this vertical.",
+          "steps": [
+            {
+              "tag": "plan.brief"
+            },
+            {
+              "tag": "asset.search",
+              "with": {
+                "filter": "job_photos_last_7d"
+              }
+            },
+            {
+              "tag": "produce.copy.short",
+              "with": {
+                "include": "town name, problem, fix, timeframe"
+              }
+            },
+            {
+              "tag": "produce.image.edit",
+              "with": {
+                "op": "before_after_pair"
+              }
+            },
+            {
+              "tag": "verify.compliance",
+              "with": {
+                "check": "licence number present, service area accurate"
+              }
+            },
+            {
+              "tag": "distribute.publish",
+              "with": {
+                "fan_out": [
+                  "google_business",
+                  "instagram"
+                ]
+              }
+            },
+            {
+              "tag": "asset.log"
+            }
+          ],
+          "expected_kpi": "calls_and_booked_jobs"
+        },
+        {
+          "id": "weather_trigger",
+          "title": "Weather-triggered urgency",
+          "objective": "conversion",
+          "when": "A forecast threshold in the service area is crossed. Fires automatically from a schedule/webhook, not from a human request.",
+          "steps": [
+            {
+              "tag": "plan.brief",
+              "with": {
+                "source": "weather_event"
+              }
+            },
+            {
+              "tag": "asset.search",
+              "with": {
+                "filter": "seasonal_library"
+              }
+            },
+            {
+              "tag": "produce.copy.short",
+              "with": {
+                "urgency": "high",
+                "include": "same-day availability"
+              }
+            },
+            {
+              "tag": "verify.compliance"
+            },
+            {
+              "tag": "distribute.publish",
+              "with": {
+                "schedule": "now",
+                "fan_out": [
+                  "google_business",
+                  "instagram",
+                  "email"
+                ]
+              }
+            }
+          ],
+          "expected_kpi": "calls_and_booked_jobs"
+        },
+        {
+          "id": "review_request_loop",
+          "title": "Turn finished jobs into reviews",
+          "objective": "retention",
+          "when": "A job closed and the customer has not been asked.",
+          "steps": [
+            {
+              "tag": "plan.brief",
+              "with": {
+                "source": "crm_event"
+              }
+            },
+            {
+              "tag": "produce.copy.short",
+              "with": {
+                "channel": "email",
+                "tone": "personal"
+              }
+            },
+            {
+              "tag": "distribute.publish",
+              "with": {
+                "channel": "email"
+              }
+            },
+            {
+              "tag": "measure.collect",
+              "with": {
+                "metric": "review_velocity"
+              }
+            }
+          ],
+          "expected_kpi": "review_velocity"
+        }
+      ],
+      "prompt_fragments": {
+        "voice": "Write the way a good technician talks to a homeowner at the door: what the problem is, what it costs, how soon you can be there. No marketing register at all.",
+        "proof_instruction": "Licence number, years in business, review count and a named neighbourhood outperform every adjective available to you.",
+        "visual_instruction": "Real site, real light, real workwear. The before and after must share framing and lens so the change is legible instantly.",
+        "cta_instruction": "One call to action, matched to how aware the reader already is. Never stack two asks.",
+        "geo_instruction": "Name the service area explicitly in every piece. Reach beyond the radius is spend with no possible return, and coverage claims outside it are a compliance block."
+      }
+    },
+    "professional_services": {
+      "$schema": "../../contracts/vertical-profile.schema.json",
+      "id": "professional_services",
+      "title": "Professional Services (agency, legal, accounting, consulting)",
+      "extends": "generic",
+      "description": "The product is judgement, and the buyer is buying a person as much as a firm. Expertise-led content is the entire funnel; the constraint is that the practitioners who have the expertise have no time to write.",
+      "taxonomy": {
+        "offer_types": [
+          "service",
+          "content",
+          "event",
+          "lead_magnet",
+          "membership"
+        ],
+        "buyer_type_default": "b2b_smb",
+        "buying_cycle_days": 60,
+        "decision_makers": [
+          "founder or department head",
+          "finance approver",
+          "an internal sceptic who owns the current process"
+        ],
+        "purchase_triggers": [
+          "a deadline or filing",
+          "an incident or dispute",
+          "growth outpacing the in-house team",
+          "a bad experience with the incumbent",
+          "a funding or transaction event"
+        ],
+        "geo_scope_default": "regional",
+        "seasonality": []
+      },
+      "message": {
+        "proof_types": [
+          "case_study",
+          "certification",
+          "testimonial",
+          "press",
+          "roster",
+          "stat"
+        ],
+        "objection_library": [
+          "how is this different from the firm we use",
+          "hourly rates are unpredictable",
+          "will I get the senior person or a junior",
+          "do you know our industry",
+          "confidentiality",
+          "the switching cost is the relationship"
+        ],
+        "angle_library": [
+          "a mistake we see every week",
+          "what the rules actually say",
+          "the deadline nobody diarised",
+          "anonymised case teardown",
+          "cost of getting it wrong",
+          "how we scope and price",
+          "a practitioner's opinion on a change in the field"
+        ],
+        "cta_ladder": [
+          {
+            "stage": "unaware",
+            "label": "Read the breakdown",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "problem_aware",
+            "label": "See how it works",
+            "commitment_level": "low"
+          },
+          {
+            "stage": "solution_aware",
+            "label": "Compare options",
+            "commitment_level": "medium"
+          },
+          {
+            "stage": "product_aware",
+            "label": "Start now",
+            "commitment_level": "high"
+          },
+          {
+            "stage": "most_aware",
+            "label": "Get started today",
+            "commitment_level": "high"
+          }
+        ],
+        "lexicon": {
+          "prefer": [
+            "specific scenarios",
+            "named regulations or standards",
+            "timeframes",
+            "scoped deliverables"
+          ],
+          "avoid": [
+            "bespoke solutions",
+            "world-class team",
+            "holistic approach",
+            "value-add"
+          ],
+          "banned": [
+            "guaranteed outcome",
+            "we always win",
+            "no risk"
+          ]
+        },
+        "tone_default": [
+          "authoritative",
+          "plain",
+          "generous with expertise"
+        ],
+        "reading_level": 10
+      },
+      "channels": {
+        "weights": {
+          "linkedin": 0.4,
+          "blog": 0.25,
+          "email": 0.2,
+          "instagram": 0.15,
+          "x": 0.05,
+          "youtube": 0.1,
+          "tiktok": 0.05
+        },
+        "formats": {
+          "linkedin": [
+            "post",
+            "document_carousel",
+            "article"
+          ],
+          "blog": [
+            "article"
+          ],
+          "email": [
+            "broadcast",
+            "sequence_step"
+          ],
+          "instagram": [
+            "feed_image",
+            "reel"
+          ],
+          "youtube": [
+            "short"
+          ]
+        },
+        "excluded": [
+          "tiktok"
+        ]
+      },
+      "creative": {
+        "image_style": "editorial portrait of the practitioner, or a clean typographic card carrying one strong sentence; restrained palette, high contrast, no imagery of gavels, scales or handshakes",
+        "image_negative": "gavel, scales of justice, generic handshake, stock boardroom, blurred city skyline at dusk",
+        "video_style": "practitioner to camera answering one real question in under 60 seconds, captions burned in",
+        "shot_grammar": [
+          "the question as asked by a client",
+          "the short answer",
+          "the nuance most people miss",
+          "what to do about it",
+          "who to ask"
+        ],
+        "aspect_ratios": [
+          "1:1",
+          "4:5",
+          "9:16"
+        ],
+        "default_duration_s": 50,
+        "voice": {
+          "gender": "neutral",
+          "pace": "measured",
+          "style": "authoritative"
+        },
+        "asset_reuse_bias": 0.75
+      },
+      "compliance": {
+        "profile": "standard",
+        "regulated_claims": [
+          "outcome or success rate",
+          "regulatory interpretation",
+          "client identity",
+          "fee guarantees"
+        ],
+        "required_disclaimers": [],
+        "review_mode": "always",
+        "autonomy_ceiling": "publish_with_approval"
+      },
+      "kpis": [
+        {
+          "metric": "qualified_enquiries",
+          "primary": true,
+          "benchmark": null
+        },
+        {
+          "metric": "consult_bookings",
+          "primary": true,
+          "benchmark": null
+        },
+        {
+          "metric": "profile_views_of_practitioners",
+          "primary": false,
+          "benchmark": null
+        },
+        {
+          "metric": "email_reply_rate",
+          "primary": false,
+          "benchmark": 0.02
+        }
+      ],
+      "capability_bindings": {
+        "produce.image.prompt": "prompt.image.compose.ui_abstract"
+      },
+      "plays": [
+        {
+          "id": "expert_extraction",
+          "title": "Extract a practitioner's expertise from a voice note",
+          "objective": "demand_gen",
+          "when": "A practitioner has five minutes and something worth saying. The flagship play for this vertical — it removes the writing, not the expertise.",
+          "steps": [
+            {
+              "tag": "intake.transcribe"
+            },
+            {
+              "tag": "plan.brief"
+            },
+            {
+              "tag": "produce.copy.longform",
+              "with": {
+                "constraint": "preserve the practitioner's actual reasoning and hedges; do not smooth away qualifications"
+              }
+            },
+            {
+              "tag": "produce.copy.short",
+              "with": {
+                "derive_from": "longform",
+                "variants": 3
+              }
+            },
+            {
+              "tag": "produce.image.prompt"
+            },
+            {
+              "tag": "produce.image"
+            },
+            {
+              "tag": "verify.compliance",
+              "with": {
+                "check": "no client identifiable, no outcome guarantee"
+              }
+            },
+            {
+              "tag": "approve.human",
+              "with": {
+                "reviewer": "the practitioner"
+              }
+            },
+            {
+              "tag": "distribute.publish",
+              "with": {
+                "fan_out": "per_channel"
+              }
+            }
+          ],
+          "expected_kpi": "qualified_enquiries"
+        },
+        {
+          "id": "deadline_calendar",
+          "title": "Regulatory / deadline calendar",
+          "objective": "awareness",
+          "when": "A recurring statutory or industry date is approaching in the audience's jurisdiction.",
+          "steps": [
+            {
+              "tag": "plan.brief",
+              "with": {
+                "source": "schedule"
+              }
+            },
+            {
+              "tag": "research.market",
+              "with": {
+                "focus": "current-year rules and thresholds"
+              }
+            },
+            {
+              "tag": "produce.copy.short"
+            },
+            {
+              "tag": "verify.compliance"
+            },
+            {
+              "tag": "approve.human"
+            },
+            {
+              "tag": "distribute.publish"
+            }
+          ],
+          "expected_kpi": "profile_views_of_practitioners"
+        }
+      ],
+      "prompt_fragments": {
+        "voice": "Write as the practitioner, not about them. Keep their hedges — in this field a qualification is a credential, and a confident overstatement is a liability.",
+        "proof_instruction": "Anonymised specifics beat named generalities. 'A manufacturer with 40 staff, three weeks before filing' is proof; 'our extensive experience' is not.",
+        "visual_instruction": "Either a real portrait or clean typography. No metaphor imagery from the legal/finance stock canon.",
+        "cta_instruction": "One call to action, matched to how aware the reader already is. Never stack two asks.",
+        "compliance_instruction": "Never state or imply a guaranteed outcome, and never make a client identifiable without an explicit release recorded in the brief."
+      }
+    }
+  }
+}

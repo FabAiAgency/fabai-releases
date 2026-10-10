@@ -1,0 +1,30 @@
+{
+  "capability": {
+    "id": "dist.schedule.enqueue",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Schedule / Queue Publication",
+    "summary": "Holds a ready PublishRequest until its slot, respecting per-channel rate limits and per-tenant pacing. Without this, a campaign that produces twelve posts publishes twelve posts in ninety seconds and burns the account.",
+    "owner": "distribution",
+    "maturity": "beta",
+    "capability_tags": ["distribute.schedule"],
+    "side_effects": "internal_write",
+    "idempotent": true,
+    "compensation": "dist.schedule.cancel",
+    "sla": { "p50_ms": 300, "p95_ms": 1500, "timeout_ms": 20000 },
+    "requires": { "secrets": ["MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "slot", "kind": "code", "title": "Resolve Slot", "group": "Schedule",
+        "with": { "code": "const CH = JSON.parse($env.MOS_CHANNELS || '{}');\nconst p = $json.payload;\nconst ch = CH[p.channel] || {};\nconst mode = p.schedule?.mode || 'now';\nconst limit = ch.rate_limit || {};\n\n// Pacing windows by channel kind. An organic feed tolerates one post a day; a messaging\n// channel tolerates more; a marketplace listing is effectively unlimited.\nconst MIN_GAP_MIN = { social_consumer: 240, social_professional: 360, owned: 120, messaging: 5, local: 720, commerce: 1, paid: 60 };\nconst gap = MIN_GAP_MIN[ch.kind] ?? 120;\n\nreturn [{ json: {\n  mode,\n  requested_at: p.schedule?.at || null,\n  min_gap_minutes: gap,\n  daily_cap: limit.per_day ?? null,\n  channel: p.channel,\n  timezone: p.schedule?.timezone || 'UTC',\n  supports_native_scheduling: ch.supports?.scheduling === true\n} }];" } },
+      { "id": "enqueue", "kind": "http", "title": "Enqueue", "group": "Schedule",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/schedule", "auth": "headerAuth",
+          "body": { "tenant_id": "={{ $('Envelope In').first().json.tenant_id }}", "trace_id": "={{ $('Envelope In').first().json.trace_id }}", "channel": "={{ $json.channel }}", "request": "={{ $('Envelope In').first().json.payload }}", "mode": "={{ $json.mode }}", "requested_at": "={{ $json.requested_at }}", "min_gap_minutes": "={{ $json.min_gap_minutes }}", "daily_cap": "={{ $json.daily_cap }}", "idempotency_key": "={{ $('Envelope In').first().json.payload.idempotency_key }}" },
+          "note": "The queue assigns the actual slot: it knows what else is already scheduled for this account today, which no individual workflow run can." } }
+    ]
+  }
+}

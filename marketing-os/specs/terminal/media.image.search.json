@@ -1,0 +1,47 @@
+{
+  "capability": {
+    "id": "media.image.search",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Search Asset Library (DAM)",
+    "summary": "Semantic + structured search over everything the tenant has ever produced, filtered by rights and performance. The screenshots had this as a single 'Search Images' tool; promoted here to a first-class terminal because reuse-before-generate is the largest cost lever in the estate.",
+    "owner": "dam",
+    "maturity": "ga",
+    "capability_tags": ["asset.search"],
+    "side_effects": "none",
+    "idempotent": true,
+    "providers": [{ "name": "internal", "tier": "nano", "cost_per_unit_minor": 0.1, "unit": "call" }],
+    "sla": { "p50_ms": 300, "p95_ms": 1200, "timeout_ms": 15000 },
+    "requires": { "secrets": ["MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "embed", "kind": "http", "title": "Embed Query", "group": "Search",
+        "with": { "method": "POST", "url": "https://api.openai.com/v1/embeddings", "auth": "openAiApi",
+          "body": { "model": "text-embedding-3-large", "input": "={{ $json.payload.query }}" } } },
+      { "id": "search", "kind": "http", "title": "Vector + Filter Search", "group": "Search",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/dam/search", "auth": "headerAuth",
+          "body": {
+            "tenant_id": "={{ $('Envelope In').first().json.tenant_id }}",
+            "brand_id": "={{ $('Envelope In').first().json.brand_id }}",
+            "vector": "={{ $json.data[0].embedding }}",
+            "filters": {
+              "kind": "={{ $('Envelope In').first().json.payload.kind || 'image' }}",
+              "rights_license_not": ["unknown"],
+              "rights_not_expired": true,
+              "min_score": "={{ $('Envelope In').first().json.payload.min_performance_score ?? null }}",
+              "channel_fit": "={{ $('Envelope In').first().json.payload.channel ?? null }}",
+              "tags": "={{ $('Envelope In').first().json.payload.tags || [] }}"
+            },
+            "limit": "={{ $('Envelope In').first().json.payload.limit || 8 }}"
+          } } },
+      { "id": "decide", "kind": "code", "title": "Reuse or Generate", "group": "Decision",
+        "with": { "code": "// The reuse decision is arithmetic, not vibes: similarity, rights, freshness and the\n// vertical's reuse bias. Recorded as a decision so the cost saving is attributable.\nconst env = $('Envelope In').first().json;\nconst bias = env.payload?.profile?.creative?.asset_reuse_bias ?? 0.5;\nconst threshold = 0.9 - (bias * 0.25); // higher bias => accept looser matches\nconst hits = ($json.results || []).filter(h => h.similarity >= threshold);\nconst fatigued = hits.filter(h => (h.used_count ?? 0) >= 3 && (h.days_since_last_use ?? 99) < 30);\nconst usable = hits.filter(h => !fatigued.includes(h));\n\nreturn [{ json: {\n  decision: usable.length ? 'reuse' : 'generate',\n  threshold,\n  reuse_bias: bias,\n  candidates: usable.slice(0, 5),\n  fatigued_excluded: fatigued.length,\n  rationale: usable.length\n    ? `${usable.length} asset(s) above similarity ${threshold.toFixed(2)} with clean rights; reusing avoids a generation spend.`\n    : `No asset above similarity ${threshold.toFixed(2)} with clean rights and no fatigue; generating fresh.`\n} }];" } },
+      { "id": "record", "kind": "emit", "title": "Record Decision", "group": "Decision",
+        "with": { "event": "span_end", "decision_kind": "asset_reuse_vs_generate" } }
+    ]
+  }
+}

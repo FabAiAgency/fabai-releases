@@ -1,0 +1,52 @@
+{
+  "capability": {
+    "id": "dist.publish.telegram",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Publish to Telegram",
+    "summary": "Channel adapter. Consumes a channel-neutral PublishRequest and speaks Telegram. Re-verifies its own gates rather than trusting the caller — defence in depth on the only step the public can see.",
+    "owner": "distribution",
+    "maturity": "ga",
+    "capability_tags": ["distribute.publish"],
+    "input_schema": "contracts/publish-request.schema.json",
+    "side_effects": "publish",
+    "idempotent": true,
+    "compensation": null,
+    "providers": [{ "name": "telegram", "tier": "nano", "cost_per_unit_minor": 0, "unit": "call" }],
+    "sla": { "p50_ms": 700, "p95_ms": 3000, "timeout_ms": 30000 },
+    "retry": { "max_attempts": 3, "backoff": "exponential", "base_ms": 2000, "retry_on": ["RATE_LIMITED", "TIMEOUT"] },
+    "requires": { "secrets": ["TELEGRAM_BOT_TOKEN"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 },
+    "observability": { "emits": ["published"], "runbook": "docs/05-operations.md#publish-adapters" }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "gates", "kind": "guard", "title": "Re-verify Gates", "group": "Publish",
+        "with": { "checks": ["compliance", "brand", "rights", "approval"],
+          "note": "Telegram delivery is NOT compensable. Once sent it is read. That is why this adapter re-checks rather than trusts." } },
+      { "id": "idem", "kind": "http", "title": "Idempotency Check", "group": "Publish",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/publish/{{ $json.idempotency_key }}", "auth": "headerAuth" },
+        "onError": "continue" },
+      { "id": "already", "kind": "if", "title": "Already Sent?", "group": "Publish",
+        "with": { "condition": "={{ !!$json.published_at }}" },
+        "next": { "true": "return_prior", "false": "route" } },
+      { "id": "return_prior", "next": null, "kind": "set", "title": "Return Prior Result", "group": "Publish",
+        "with": { "assignments": { "status": "already_published", "published_at": "={{ $json.published_at }}", "external_id": "={{ $json.external_id }}" } } },
+      { "id": "route", "kind": "switch", "title": "Content Shape", "group": "Publish",
+        "with": { "value": "={{ $('Envelope In').first().json.payload.format }}", "cases": ["message", "photo", "video", "document"], "fallback": "message" } },
+      { "id": "message", "kind": "telegram", "title": "Send Message", "group": "Publish",
+        "with": { "operation": "sendMessage", "chatId": "={{ $('Envelope In').first().json.payload.account_ref }}", "text": "={{ $('Envelope In').first().json.payload.content.body }}", "parseMode": "Markdown" } },
+      { "id": "photo", "kind": "telegram", "title": "Send Photo", "group": "Publish",
+        "with": { "operation": "sendPhoto", "chatId": "={{ $('Envelope In').first().json.payload.account_ref }}", "file": "={{ $('Envelope In').first().json.payload.content.asset_urls[0] }}", "caption": "={{ $('Envelope In').first().json.payload.content.caption }}" } },
+      { "id": "video", "kind": "telegram", "title": "Send Video", "group": "Publish",
+        "with": { "operation": "sendVideo", "chatId": "={{ $('Envelope In').first().json.payload.account_ref }}", "file": "={{ $('Envelope In').first().json.payload.content.asset_urls[0] }}", "caption": "={{ $('Envelope In').first().json.payload.content.caption }}" } },
+      { "id": "document", "kind": "telegram", "title": "Send Document", "group": "Publish",
+        "with": { "operation": "sendDocument", "chatId": "={{ $('Envelope In').first().json.payload.account_ref }}", "file": "={{ $('Envelope In').first().json.payload.content.asset_urls[0] }}" } },
+      { "id": "record", "kind": "http", "title": "Record Publication", "group": "Publish",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/publish", "auth": "headerAuth",
+          "body": { "idempotency_key": "={{ $('Envelope In').first().json.payload.idempotency_key }}", "channel": "telegram", "external_id": "={{ $json.result?.message_id }}", "published_at": "={{ $now.toISO() }}", "trace_id": "={{ $('Envelope In').first().json.trace_id }}" } } }
+    ]
+  }
+}

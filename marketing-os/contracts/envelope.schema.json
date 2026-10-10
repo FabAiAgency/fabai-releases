@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fabai.dev/mos/contracts/envelope.schema.json",
+  "title": "MOS Envelope",
+  "description": "The single message format exchanged between every unit in the Marketing OS. Terminal processes, subsystems and the system orchestrator all speak this and nothing else. A unit may only read `payload` for business data; everything else is control plane.",
+  "type": "object",
+  "required": ["envelope_version", "trace_id", "tenant_id", "intent", "stage", "idempotency_key", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "envelope_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semver of this contract. Consumers MUST reject a major version they do not implement."
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Stable for the whole campaign run. Every log line, ledger row and asset carries it."
+    },
+    "span_id": { "type": "string", "description": "Unique per capability invocation." },
+    "parent_span_id": { "type": ["string", "null"] },
+
+    "tenant_id": { "type": "string", "description": "Hard isolation boundary. Secrets, budgets, storage and ledgers are scoped by it." },
+    "brand_id": { "type": ["string", "null"], "description": "A tenant may run many brands; brand resolves voice, palette, assets and guardrails." },
+    "vertical": {
+      "type": "string",
+      "description": "Vertical profile id from registry/verticals. Drives every behavioural default. `generic` is always valid.",
+      "default": "generic"
+    },
+    "locale": { "type": "string", "default": "en-US", "description": "BCP-47. Drives copy, currency, date format, compliance variant." },
+    "region": { "type": "string", "default": "us", "description": "Data residency / routing region." },
+
+    "intent": {
+      "type": "string",
+      "description": "What the caller wants, in capability-tag terms (e.g. `campaign.launch`, `content.single`, `asset.repurpose`)."
+    },
+    "stage": {
+      "type": "string",
+      "enum": ["intake", "understand", "plan", "research", "produce", "assemble", "verify", "approve", "distribute", "measure", "learn", "compensate", "terminal"],
+      "description": "Position in the system loop. Used for routing, dashboards and replay filters."
+    },
+
+    "idempotency_key": {
+      "type": "string",
+      "description": "sha256(tenant_id + capability + canonical(payload)). A side-effecting capability MUST no-op and return the prior result on a repeat."
+    },
+    "attempt": { "type": "integer", "minimum": 1, "default": 1 },
+    "max_attempts": { "type": "integer", "minimum": 1, "default": 3 },
+    "deadline_at": { "type": "string", "format": "date-time", "description": "Absolute wall-clock deadline. A unit that cannot finish before it MUST fail fast rather than start." },
+
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "autonomy_level": {
+          "type": "string",
+          "enum": ["suggest", "draft", "publish_with_approval", "publish_autonomous"],
+          "default": "publish_with_approval",
+          "description": "Ceiling on what the system may do without a human. Never widened by a downstream unit, only narrowed."
+        },
+        "compliance_profile": { "type": "string", "default": "standard", "description": "Id from registry/policies/compliance.json." },
+        "approval_mode": { "type": "string", "enum": ["none", "sampled", "always", "channel_conditional"], "default": "channel_conditional" },
+        "data_residency": { "type": "string", "enum": ["any", "us", "eu", "uk", "apac"], "default": "any" },
+        "pii_redaction": { "type": "boolean", "default": true },
+        "allow_external_research": { "type": "boolean", "default": true },
+        "model_tier_cap": { "type": "string", "enum": ["nano", "small", "standard", "frontier"], "default": "frontier" }
+      }
+    },
+
+    "budget": {
+      "type": "object",
+      "description": "Enforced by the cost governor before every billable call. Exceeding the cap fails the span with `BUDGET_EXCEEDED`, never silently degrades.",
+      "additionalProperties": false,
+      "properties": {
+        "currency": { "type": "string", "default": "USD" },
+        "cap_minor_units": { "type": "integer", "minimum": 0 },
+        "spent_minor_units": { "type": "integer", "minimum": 0, "default": 0 },
+        "soft_limit_pct": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.8 },
+        "on_soft_limit": { "type": "string", "enum": ["notify", "downgrade_tier", "halt_optional"], "default": "downgrade_tier" }
+      }
+    },
+
+    "routing": {
+      "type": "object",
+      "description": "Filled by the decision engine. `requested_capability` is abstract; `implementation` is the concrete spec that ran.",
+      "additionalProperties": false,
+      "properties": {
+        "requested_capability": { "type": "string" },
+        "resolved_capability": { "type": "string" },
+        "implementation": { "type": "string" },
+        "decision_id": { "type": "string" },
+        "binding_source": { "type": "string", "enum": ["hard_rule", "vertical_binding", "policy_table", "model", "default"] },
+        "fallback_depth": { "type": "integer", "minimum": 0, "default": 0 }
+      }
+    },
+
+    "payload": {
+      "type": "object",
+      "description": "Capability-specific body. Validated against the capability's declared input_schema, not here."
+    },
+
+    "provenance": {
+      "type": "array",
+      "description": "Append-only. Every unit pushes exactly one entry. Never rewritten — this is the audit trail an enterprise review reads.",
+      "items": {
+        "type": "object",
+        "required": ["capability", "version", "at"],
+        "properties": {
+          "capability": { "type": "string" },
+          "version": { "type": "string" },
+          "at": { "type": "string", "format": "date-time" },
+          "model": { "type": ["string", "null"] },
+          "provider": { "type": ["string", "null"] },
+          "duration_ms": { "type": "integer" },
+          "cost_minor_units": { "type": "integer" },
+          "inputs_hash": { "type": "string" },
+          "decision_id": { "type": ["string", "null"] }
+        }
+      }
+    },
+
+    "error": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": ["VALIDATION_FAILED", "PROVIDER_ERROR", "RATE_LIMITED", "TIMEOUT", "BUDGET_EXCEEDED", "POLICY_BLOCKED", "COMPLIANCE_BLOCKED", "BRAND_BLOCKED", "NOT_FOUND", "CONFLICT", "DEPENDENCY_FAILED", "INTERNAL"]
+        },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" },
+        "provider": { "type": ["string", "null"] },
+        "at": { "type": "string", "format": "date-time" },
+        "compensation_required": { "type": "boolean", "default": false }
+      }
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "capability": {
+    "id": "ops.budget.release",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Release Budget Reservation",
+    "summary": "Compensation for ops.budget.check. Releases a reservation when the work it was reserved for did not happen. Without this, failed runs slowly starve a tenant of budget it never actually spent.",
+    "owner": "platform",
+    "maturity": "ga",
+    "capability_tags": [
+      "compensate.ops.budget"
+    ],
+    "side_effects": "external_write",
+    "idempotent": true,
+    "compensation": null,
+    "sla": {
+      "p50_ms": 800,
+      "p95_ms": 4000,
+      "timeout_ms": 30000
+    },
+    "retry": {
+      "max_attempts": 5,
+      "backoff": "exponential",
+      "base_ms": 2000
+    },
+    "requires": {
+      "secrets": [
+        "MOS_STATE_URL"
+      ]
+    },
+    "verticals": "*",
+    "cost_model": {
+      "estimate_minor_units": 0
+    },
+    "observability": {
+      "slo": "99.9% — a compensation that fails leaves the system inconsistent, which is worse than the original failure"
+    }
+  },
+  "n8n": {
+    "trigger": {
+      "kind": "executeWorkflow"
+    },
+    "nodes": [
+      {
+        "id": "release",
+        "kind": "http",
+        "title": "Release",
+        "group": "Compensate",
+        "with": {
+          "method": "POST",
+          "url": "={{ $env.MOS_STATE_URL }}/budget/release",
+          "auth": "headerAuth",
+          "body": {
+            "idempotency_key": "={{ $json.payload.idempotency_key }}",
+            "trace_id": "={{ $json.trace_id }}"
+          }
+        }
+      }
+    ]
+  }
+}

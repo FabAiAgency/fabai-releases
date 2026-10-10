@@ -1,0 +1,41 @@
+{
+  "capability": {
+    "id": "approve.human.request",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Request Human Approval",
+    "summary": "Renders a preview, sends it to the reviewer's surface, and waits on a resumable webhook. An unanswered approval EXPIRES into the parked state — silence is never consent, and a timeout must never fall through into a post.",
+    "owner": "governance",
+    "maturity": "ga",
+    "capability_tags": ["approve.human"],
+    "side_effects": "external_write",
+    "idempotent": true,
+    "compensation": "approve.human.cancel",
+    "sla": { "p50_ms": 2000, "p95_ms": 8000, "timeout_ms": 86400000, "async": true },
+    "requires": { "secrets": ["TELEGRAM_BOT_TOKEN", "MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "preview", "kind": "code", "title": "Build Review Packet", "group": "Approval",
+        "with": { "code": "// A reviewer approves in seconds or not at all. The packet must answer: what is it, where\n// is it going, what did the automated gates say, and what has it cost so far.\nconst e = $('Envelope In').first().json;\nconst p = e.payload;\nconst gates = p.gates || {};\nconst gateLine = Object.entries(gates).map(([k, v]) => `${v === 'pass' || v === 'approved' || v === 'not_required' ? 'OK' : v === 'warn' ? 'WARN' : 'FAIL'} ${k}`).join('  |  ');\nreturn [{ json: {\n  approval_id: 'apr_' + e.trace_id.slice(0, 12) + '_' + ($runIndex || 0),\n  summary: `${p.channel || 'multi'} / ${p.format || ''} — ${p.title || (p.body || '').slice(0, 80)}`,\n  gate_line: gateLine,\n  findings: [...(p.compliance_findings || []), ...(p.brand_violations || [])].slice(0, 5),\n  cost_so_far_minor_units: (e.budget?.spent_minor_units ?? 0),\n  preview_urls: p.asset_urls || [],\n  body_preview: (p.body || p.caption || '').slice(0, 900),\n  trace_id: e.trace_id,\n  expires_at: new Date(Date.now() + (p.timeout_hours || 24) * 3600e3).toISOString()\n} }];" } },
+      { "id": "register", "kind": "http", "title": "Register Approval", "group": "Approval",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/approvals", "auth": "headerAuth",
+          "body": { "approval_id": "={{ $json.approval_id }}", "tenant_id": "={{ $('Envelope In').first().json.tenant_id }}", "trace_id": "={{ $json.trace_id }}", "resume_url": "={{ $execution.resumeUrl }}", "expires_at": "={{ $json.expires_at }}", "packet": "={{ $json }}" } } },
+      { "id": "notify", "kind": "telegram", "title": "Send to Reviewer", "group": "Approval",
+        "with": { "operation": "sendMessage", "chatId": "={{ $env.MOS_REVIEW_CHAT_ID }}",
+          "text": "=*Approval needed*\n{{ $('Build Review Packet').first().json.summary }}\n\nGates: {{ $('Build Review Packet').first().json.gate_line }}\nSpent so far: {{ $('Build Review Packet').first().json.cost_so_far_minor_units }} minor units\nExpires: {{ $('Build Review Packet').first().json.expires_at }}\n\n{{ $('Build Review Packet').first().json.body_preview }}",
+          "buttons": [
+            { "text": "Approve", "url": "={{ $execution.resumeUrl }}?decision=approved" },
+            { "text": "Reject", "url": "={{ $execution.resumeUrl }}?decision=rejected" },
+            { "text": "Request changes", "url": "={{ $execution.resumeUrl }}?decision=changes" }
+          ] } },
+      { "id": "wait", "kind": "wait", "title": "Await Decision", "group": "Approval",
+        "with": { "resume": "webhook", "timeout_hours": "={{ $('Envelope In').first().json.payload.timeout_hours || 24 }}" } },
+      { "id": "resolve", "kind": "code", "title": "Resolve Decision", "group": "Approval",
+        "with": { "code": "// A timeout resolves to `expired`, which the orchestrator treats as a park, NOT an approval.\n// This is the single most important line in the governance layer.\nconst q = $json.query || {};\nconst decision = q.decision || 'expired';\nreturn [{ json: {\n  status: decision === 'approved' ? 'approved' : decision === 'rejected' ? 'rejected' : decision === 'changes' ? 'changes_requested' : 'expired',\n  may_proceed: decision === 'approved',\n  reviewer: q.reviewer || null,\n  note: q.note || null,\n  resolved_at: new Date().toISOString(),\n  approval_id: $('Build Review Packet').first().json.approval_id\n} }];" } }
+    ]
+  }
+}

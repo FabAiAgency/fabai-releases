@@ -1,0 +1,19 @@
+{
+  "extends": "prompt.image.compose",
+  "capability": {
+    "id": "prompt.image.compose.product_studio",
+    "version": "1.0.0",
+    "title": "Compose Image Prompts — Product Studio",
+    "summary": "Specialisation bound by e-commerce and home-goods profiles. A product must be unmistakable, correctly proportioned and the right colour; everything else is negotiable. Fifteen lines of override, not a forked workflow.",
+    "capability_tags": ["produce.image.prompt"],
+    "verticals": ["ecommerce_dtc", "home_goods"],
+    "side_effects": "none",
+    "idempotent": true
+  },
+  "overrides": {
+    "compose": {
+      "system_append": "\n\nPRODUCT DISCIPLINE\n- One product per frame unless the brief asks for a bundle.\n- State the material, finish and true colour name explicitly; image models drift colour badly without it.\n- Always ground the product: a surface, a contact shadow, a plausible scale reference.\n- Alternate the set between clean hero frames and in-use frames. A set of only hero shots converts worse than a mixed set.\n- Never render packaging copy, logos or labels as image text — those are composited from brand assets.",
+      "extra_prompt_fields": { "shot_type": { "type": "string", "enum": ["hero", "in_use", "detail_macro", "scale_reference", "group"] } }
+    }
+  }
+}

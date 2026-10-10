@@ -1,0 +1,41 @@
+{
+  "capability": {
+    "id": "verify.compliance.screen",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Compliance Screen",
+    "summary": "Deterministic lexicon and pattern rules first, a model only for what a list cannot judge. A `block` finding is terminal: no downstream unit may proceed, and the run parks for a human with the finding attached.",
+    "owner": "governance",
+    "maturity": "ga",
+    "capability_tags": ["verify.compliance"],
+    "side_effects": "none",
+    "idempotent": true,
+    "providers": [{ "name": "anthropic", "model": "claude-haiku-4-5-20251001", "tier": "small", "cost_per_unit_minor": 1, "unit": "call" }],
+    "sla": { "p50_ms": 1800, "p95_ms": 7000, "timeout_ms": 45000 },
+    "retry": { "max_attempts": 2, "backoff": "exponential", "base_ms": 1500 },
+    "requires": { "secrets": ["ANTHROPIC_API_KEY", "MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 1 },
+    "observability": { "slo": "100% of publish-bound items screened", "runbook": "docs/06-governance.md#compliance-screen" }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "profile", "kind": "http", "title": "Load Compliance Profile", "group": "Governance",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/registry/compliance/{{ $json.policy.compliance_profile || 'standard' }}?resolved=true", "auth": "headerAuth" } },
+      { "id": "deterministic", "kind": "code", "title": "Deterministic Rules", "group": "Governance",
+        "with": { "code": "// Free, instant, and it catches the majority. Run this BEFORE paying a model to think.\nconst profile = $json;\nconst env = $('Envelope In').first().json;\nconst text = [env.payload.title, env.payload.body, env.payload.caption, ...(env.payload.on_screen_text || [])].filter(Boolean).join('\\n');\nconst lower = text.toLowerCase();\nconst findings = [];\n\nconst PATTERNS = {\n  absolute_claim: /\\b(guaranteed|guarantee[sd]?|100% (effective|safe)|never fails?|always works?|#1 (in|worldwide))\\b/i,\n  fake_scarcity: /\\b(only \\d+ left|ends in \\d+ (minutes|hours)|last chance ever)\\b/i,\n  disease_claim: /\\b(cures?|treats?|prevents?|heals?|reverses?)\\s+\\w*\\s*(disease|cancer|diabetes|depression|anxiety|arthritis)\\b/i,\n  outcome_guarantee: /\\b(guaranteed|assured|certain)\\s+(results?|outcomes?|weight loss|returns?)\\b/i,\n  return_projection: /\\b(\\d+%\\s*(returns?|gains?|apy|roi)\\s*(guaranteed|assured)?)\\b/i,\n  past_performance_without_disclaimer: /\\b(returned|gained|grew)\\s+\\d+%/i,\n  competitor_disparagement: /\\b(unlike|better than)\\s+(competitor|[A-Z][a-z]+)\\b.*\\b(broken|useless|scam|terrible)\\b/i,\n  unsubstantiated_statistic: /\\b\\d{1,3}(\\.\\d+)?%\\b/,\n  protected_class_targeting: /\\b(only|perfect for|ideal for)\\s+(men|women|christians|muslims|jews|young people|families with children|seniors)\\b/i\n};\n\nfor (const rule of (profile.rules || [])) {\n  const re = PATTERNS[rule.test];\n  if (!re) continue;\n  const m = text.match(re);\n  if (m) findings.push({ rule_id: rule.id, severity: rule.severity, test: rule.test, detail: rule.detail || null, evidence: m[0] });\n}\n\nfor (const term of (env.payload.banned_terms || [])) {\n  if (lower.includes(String(term).toLowerCase())) findings.push({ rule_id: 'LEX-BANNED', severity: 'block', test: 'banned_term', evidence: term });\n}\n\nfor (const d of (profile.required_disclaimers || [])) {\n  const present = lower.includes(String(d.text).toLowerCase().slice(0, 40));\n  if (!present) findings.push({ rule_id: 'DISC-' + (d.when || 'required'), severity: 'block', test: 'missing_disclaimer', detail: d.text, placement: d.placement });\n}\n\nreturn [{ json: { deterministic_findings: findings, text, needs_model_screen: (profile.review_mode || 'sampled') !== 'none' } }];" } },
+      { "id": "needs_model", "kind": "if", "title": "Model Screen Needed?", "group": "Governance",
+        "with": { "condition": "={{ $json.needs_model_screen && $json.deterministic_findings.filter(f => f.severity === 'block').length === 0 }}",
+          "note": "A deterministic block already decides the outcome — do not pay for a model to agree with it." },
+        "next": { "true": "model_screen", "false": "verdict" } },
+      { "id": "model_screen", "next": "verdict", "kind": "llm", "title": "Judgement Screen", "group": "Governance",
+        "with": { "role": "classify.intent",
+          "system": "You are a compliance reviewer. You judge ONLY what a rule list cannot: implication, context, and whether an image and its caption together create a claim neither makes alone.\n\nYou are conservative in one direction only: when genuinely uncertain, flag as `warn`, never silently pass. You do not rewrite copy and you do not moralise about taste — a finding names a rule and the evidence for it.\n\nPROFILE RULES:\n{{ JSON.stringify($('Load Compliance Profile').first().json.rules) }}",
+          "prompt": "COPY:\n{{ $json.text }}\n\nIMAGE DESCRIPTIONS:\n{{ JSON.stringify($('Envelope In').first().json.payload.image_alt_texts || []) }}\n\nCLAIMS DECLARED IN BRIEF:\n{{ JSON.stringify($('Envelope In').first().json.payload.key_claims || []) }}",
+          "structured": { "type": "object", "required": ["findings"], "properties": { "findings": { "type": "array", "items": { "type": "object", "required": ["rule_id", "severity", "detail"], "properties": { "rule_id": { "type": "string" }, "severity": { "type": "string", "enum": ["info", "warn", "block"] }, "detail": { "type": "string" }, "evidence": { "type": "string" } } } } } } } },
+      { "id": "verdict", "kind": "code", "title": "Verdict", "group": "Governance",
+        "with": { "code": "const det = $('Deterministic Rules').first().json.deterministic_findings || [];\nconst model = ($json.output || $json).findings || [];\nconst all = [...det, ...model];\nconst blocked = all.some(f => f.severity === 'block');\nconst warned = all.some(f => f.severity === 'warn');\nreturn [{ json: {\n  status: blocked ? 'fail' : (warned ? 'warn' : 'pass'),\n  findings: all,\n  blocking_findings: all.filter(f => f.severity === 'block'),\n  screened_by: model.length ? ['deterministic', 'model'] : ['deterministic'],\n  // The orchestrator reads this and nothing else. A 'fail' cannot be argued past downstream.\n  may_proceed: !blocked\n} }];" } }
+    ]
+  }
+}

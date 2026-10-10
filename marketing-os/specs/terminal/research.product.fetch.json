@@ -1,0 +1,38 @@
+{
+  "capability": {
+    "id": "research.product.fetch",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Fetch Product / Offer Data",
+    "summary": "Pulls first-party facts — catalogue attributes, spec sheets, reviews, CRM notes, usage data — from whatever system holds them. First-party data beats a model's recollection every time, and in regulated verticals it is the only acceptable source.",
+    "owner": "intelligence",
+    "maturity": "beta",
+    "capability_tags": ["research.product"],
+    "side_effects": "none",
+    "idempotent": true,
+    "sla": { "p50_ms": 900, "p95_ms": 4000, "timeout_ms": 30000 },
+    "retry": { "max_attempts": 3, "backoff": "exponential", "base_ms": 1500 },
+    "requires": { "secrets": ["MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "source", "kind": "switch", "title": "Which Source?", "group": "Research",
+        "with": { "value": "={{ $json.payload.source || 'catalog' }}", "cases": ["catalog", "reviews", "spec_sheets", "crm", "usage_data"], "fallback": "catalog" } },
+      { "id": "catalog", "kind": "http", "title": "Catalogue", "group": "Research",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/connectors/catalog/{{ $('Envelope In').first().json.tenant_id }}/items/{{ $('Envelope In').first().json.payload.sku }}", "auth": "headerAuth" } },
+      { "id": "reviews", "kind": "http", "title": "Reviews", "group": "Research",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/connectors/reviews/{{ $('Envelope In').first().json.tenant_id }}?sku={{ $('Envelope In').first().json.payload.sku }}&limit=100", "auth": "headerAuth" } },
+      { "id": "spec_sheets", "kind": "http", "title": "Spec Sheets", "group": "Research",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/connectors/docs/{{ $('Envelope In').first().json.tenant_id }}?type=spec&q={{ $('Envelope In').first().json.payload.query }}", "auth": "headerAuth" } },
+      { "id": "crm", "kind": "http", "title": "CRM", "group": "Research",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/connectors/crm/{{ $('Envelope In').first().json.tenant_id }}/accounts/{{ $('Envelope In').first().json.payload.account_id }}", "auth": "headerAuth" } },
+      { "id": "usage_data", "kind": "http", "title": "Usage Data", "group": "Research",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/connectors/usage/{{ $('Envelope In').first().json.tenant_id }}?account_id={{ $('Envelope In').first().json.payload.account_id }}", "auth": "headerAuth" } },
+      { "id": "extract", "kind": "code", "title": "Extract Facts", "group": "Research",
+        "with": { "code": "// Everything returned here is marked first_party: true. Downstream copy generation may state\n// a first-party fact plainly; a web finding must be attributed.\nconst raw = $json;\nconst want = $('Envelope In').first().json.payload.extract || null;\nconst facts = [];\n\nif (Array.isArray(raw.reviews)) {\n  const phrases = {};\n  for (const r of raw.reviews) for (const s of String(r.body || '').split(/[.!?]/)) { const t = s.trim().toLowerCase(); if (t.length > 20 && t.length < 120) phrases[t] = (phrases[t] || 0) + 1; }\n  const recurring = Object.entries(phrases).sort((a, b) => b[1] - a[1]).slice(0, 10);\n  facts.push({ kind: 'recurring_customer_language', value: recurring.map(([t, n]) => ({ phrase: t, count: n })), first_party: true });\n  facts.push({ kind: 'review_score', value: (raw.reviews.reduce((a, r) => a + (r.rating || 0), 0) / raw.reviews.length).toFixed(2), sample: raw.reviews.length, first_party: true });\n}\nif (raw.attributes) facts.push({ kind: 'attributes', value: raw.attributes, first_party: true });\nif (raw.specs) facts.push({ kind: 'specifications', value: raw.specs, first_party: true });\nif (raw.account) facts.push({ kind: 'account_context', value: raw.account, first_party: true });\n\nreturn [{ json: { facts, requested: want, source: $('Envelope In').first().json.payload.source || 'catalog', citable_without_attribution: true } }];" } }
+    ]
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "capability": {
+    "id": "plan.brief.synthesize",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Synthesise Canonical Brief",
+    "summary": "The hinge of the whole system. Free-form human intent plus the vertical profile in, a validated Brief out. Everything downstream reads the Brief and never the original message — which is exactly why one content factory can serve a plumber and a SaaS without branching.",
+    "owner": "strategy",
+    "maturity": "ga",
+    "capability_tags": ["plan.brief"],
+    "input_schema": null,
+    "output_schema": "contracts/brief.schema.json",
+    "side_effects": "none",
+    "idempotent": true,
+    "providers": [{ "name": "anthropic", "model": "claude-opus-5", "tier": "frontier", "cost_per_unit_minor": 4, "unit": "call" }],
+    "sla": { "p50_ms": 6000, "p95_ms": 20000, "timeout_ms": 90000 },
+    "retry": { "max_attempts": 2, "backoff": "exponential", "base_ms": 3000 },
+    "requires": { "secrets": ["ANTHROPIC_API_KEY", "MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 4 },
+    "observability": { "slo": "99.0% success over 7d", "runbook": "docs/05-operations.md#brief-synthesis" }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "profile", "kind": "http", "title": "Load Vertical Profile", "group": "Context",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/registry/verticals/{{ $json.vertical || 'generic' }}?resolved=true", "auth": "headerAuth",
+          "note": "`resolved=true` returns the profile with its `extends` chain already deep-merged, so the prompt never has to reason about inheritance." } },
+      { "id": "brand", "kind": "http", "title": "Load Brand Config", "group": "Context",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/tenants/{{ $('Envelope In').first().json.tenant_id }}/brands/{{ $('Envelope In').first().json.brand_id || 'default' }}", "auth": "headerAuth" },
+        "onError": "continue" },
+      { "id": "context", "kind": "merge", "title": "Assemble Context", "group": "Context", "with": { "mode": "combine", "inputs": 2 } },
+      { "id": "synthesize", "kind": "llm", "title": "Synthesise Brief", "group": "Synthesis",
+        "with": {
+          "role": "reasoning.planner",
+          "system": "You convert a human's request into a canonical marketing Brief.\n\nRULES\n1. You fill the Brief's fields. You do not invent facts. Anything you cannot source from the request, the brand config or the vertical profile goes into `open_questions` and lowers `confidence`.\n2. The vertical profile supplies DEFAULTS, not truth. A default is a reasonable prior; a stated fact from the human overrides it every time.\n3. One brief carries one controlling angle. If the request contains two unrelated campaigns, set `open_questions` to say so and emit the stronger one — do not blend them.\n4. Tag every claim in `message.key_claims` with its risk level. `regulated` on a health, financial, legal or efficacy claim routes the whole run to a human; under-tagging is the most expensive mistake you can make here.\n5. `confidence` is your honest estimate that you understood the request. Below 0.55 the system will ask the human a question instead of producing anything. A low score is a correct answer, not a failure.\n6. Channels come from the request if stated, otherwise from the profile's channel weights, capped at the top three.\n\nVERTICAL PROFILE:\n{{ JSON.stringify($json.profile) }}\n\nBRAND CONFIG:\n{{ JSON.stringify($json.brand || {}) }}",
+          "prompt": "REQUEST:\n{{ $('Envelope In').first().json.payload.text }}\n\nSOURCE: {{ $('Envelope In').first().json.payload.source_channel }}\nLOCALE: {{ $('Envelope In').first().json.locale }}\nAUTONOMY CEILING: {{ $('Envelope In').first().json.policy.autonomy_level }}",
+          "structured": { "$ref": "contracts/brief.schema.json" }
+        } },
+      { "id": "validate", "kind": "code", "title": "Validate & Stamp", "group": "Synthesis",
+        "with": { "code": "const brief = $json.output || $json;\nconst env = $('Envelope In').first().json;\nconst errors = [];\n\nif (!brief.objective) errors.push('objective missing');\nif (!brief.offer?.name) errors.push('offer.name missing');\nif (!Array.isArray(brief.channels) || !brief.channels.length) errors.push('channels empty');\n\n// A regulated claim forces the compliance profile up regardless of what the model chose.\nconst regulated = (brief.message?.key_claims || []).some(c => c.risk === 'regulated');\nif (regulated) {\n  brief.constraints = brief.constraints || {};\n  if (brief.constraints.compliance_profile === 'none' || !brief.constraints.compliance_profile) {\n    brief.constraints.compliance_profile = 'standard';\n  }\n}\n\nreturn [{ json: {\n  ...brief,\n  brief_id: brief.brief_id || ('brf_' + env.trace_id.slice(0, 12)),\n  tenant_id: env.tenant_id,\n  brand_id: env.brand_id ?? null,\n  vertical: env.vertical || 'generic',\n  source: { channel: env.payload?.source_channel || 'api', raw_ref: env.payload?.raw_ref ?? null, received_at: new Date().toISOString() },\n  confidence: typeof brief.confidence === 'number' ? brief.confidence : 0.5,\n  _validation: { ok: errors.length === 0, errors, regulated_claims_present: regulated }\n} }];" } },
+      { "id": "gate", "kind": "if", "title": "Confident Enough?", "group": "Synthesis",
+        "with": { "condition": "={{ $json._validation.ok && $json.confidence >= 0.55 }}" },
+        "next": { "true": null, "false": "clarify" } },
+      { "id": "clarify", "kind": "call", "title": "Ask the Human", "group": "Synthesis",
+        "with": { "capability": "intake.clarification.request", "payload": { "questions": "={{ $json.open_questions }}", "partial_brief": "={{ $json }}" } } }
+    ]
+  }
+}

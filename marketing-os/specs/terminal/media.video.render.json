@@ -1,0 +1,50 @@
+{
+  "capability": {
+    "id": "media.video.render",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Render Video",
+    "summary": "Clips + voiceover + captions + brand furniture composed into a finished cut. Everything about the LOOK comes from the timeline template resolved per vertical; this workflow only knows how to assemble and poll.",
+    "owner": "motion",
+    "maturity": "ga",
+    "capability_tags": ["assemble.video"],
+    "side_effects": "spend",
+    "idempotent": true,
+    "compensation": "asset.store.delete",
+    "providers": [
+      { "name": "creatomate", "model": "render_v2", "tier": "standard", "cost_per_unit_minor": 15, "unit": "minute" },
+      { "name": "shotstack", "model": "render", "tier": "standard", "cost_per_unit_minor": 18, "unit": "minute" }
+    ],
+    "sla": { "p50_ms": 45000, "p95_ms": 180000, "timeout_ms": 600000, "async": true },
+    "retry": { "max_attempts": 2, "backoff": "exponential", "base_ms": 8000 },
+    "requires": { "secrets": ["CREATOMATE_API_KEY"], "capabilities": ["asset.store.put"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 15, "variable_by": ["duration_s", "variants"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "timeline", "kind": "code", "title": "Build Timeline", "group": "Render",
+        "with": { "code": "// The timeline is DATA assembled from parts, not a template with holes punched in it.\n// A missing clip degrades that beat to its still frame rather than failing the render:\n// a video with one static beat ships; a failed render ships nothing.\nconst p = $json.payload;\nconst beats = p.beats || [];\nconst clips = new Map((p.clips || []).map(c => [c.beat_index, c]));\nconst stills = new Map((p.stills || []).map(s => [s.beat_index, s]));\nconst ar = p.aspect_ratio || '9:16';\nconst DIMS = { '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350], '16:9': [1920, 1080] };\nconst [width, height] = DIMS[ar] || DIMS['9:16'];\n\nlet t = 0, degraded = 0;\nconst tracks = beats.map((b, i) => {\n  const clip = clips.get(i);\n  const still = stills.get(i);\n  if (!clip) degraded++;\n  const el = {\n    type: clip ? 'video' : 'image',\n    source: clip?.uri || still?.uri || null,\n    time: t,\n    duration: b.duration_s,\n    // A still standing in for a missing clip gets a slow push so the cut still breathes.\n    animations: clip ? [] : [{ type: 'scale', easing: 'linear', start_scale: '100%', end_scale: '108%' }]\n  };\n  t += b.duration_s;\n  return el;\n});\n\nif (tracks.some(x => !x.source)) throw new Error('VALIDATION_FAILED: a beat has neither clip nor still');\n\nreturn [{ json: {\n  output_format: 'mp4', width, height, frame_rate: 30,\n  elements: [\n    ...tracks,\n    p.voiceover_uri ? { type: 'audio', source: p.voiceover_uri, time: 0 } : null,\n    p.music_uri ? { type: 'audio', source: p.music_uri, time: 0, volume: 0.12, audio_fade_out: 1.5 } : null,\n    ...(p.cues || []).map(c => ({ type: 'text', text: c.text, time: c.start_s, duration: Math.max(0.4, c.end_s - c.start_s), ...(p.caption_style || {}) })),\n    p.end_card ? { type: 'composition', source: p.end_card, time: Math.max(0, t - 2.5), duration: 2.5 } : null\n  ].filter(Boolean),\n  total_duration_s: t,\n  degraded_beats: degraded\n} }];" } },
+      { "id": "submit", "kind": "http", "title": "Submit Render", "group": "Render",
+        "with": { "method": "POST", "url": "https://api.creatomate.com/v1/renders", "auth": "headerAuth", "body": { "source": "={{ $json }}" } } },
+      { "id": "init_poll", "next": "wait", "kind": "set", "title": "Init Poll State", "group": "Poll",
+        "with": { "assignments": { "render_id": "={{ $json[0].id || $json.id }}", "poll_attempt": 0, "poll_deadline": "={{ $now.plus(10, 'minutes').toISO() }}" } } },
+      { "id": "wait", "kind": "wait", "title": "Backoff", "group": "Poll", "with": { "seconds": "={{ Math.min(45, 10 * Math.pow(1.4, $json.poll_attempt)) }}" } },
+      { "id": "poll", "kind": "http", "title": "Check Render", "group": "Poll",
+        "with": { "method": "GET", "url": "https://api.creatomate.com/v1/renders/{{ $json.render_id }}", "auth": "headerAuth" } },
+      { "id": "status", "kind": "switch", "title": "Render Status", "group": "Poll",
+        "with": { "value": "={{ $json.status }}", "cases": ["succeeded", "failed", "planned", "rendering"], "fallback": "rendering" },
+        "next": { "succeeded": "store", "failed": "fail", "planned": "deadline", "rendering": "deadline" } },
+      { "id": "deadline", "kind": "if", "title": "Deadline Reached?", "group": "Poll",
+        "with": { "condition": "={{ $now.toMillis() < DateTime.fromISO($('Init Poll State').first().json.poll_deadline).toMillis() }}" },
+        "next": { "true": "bump", "false": "fail" } },
+      { "id": "bump", "kind": "code", "title": "Increment Attempt", "group": "Poll",
+        "with": { "code": "const s = $('Init Poll State').first().json;\nreturn [{ json: { ...s, poll_attempt: (s.poll_attempt || 0) + 1 } }];" }, "next": "wait" },
+      { "id": "fail", "next": null, "kind": "code", "title": "Fail Render", "group": "Poll",
+        "with": { "code": "throw new Error('PROVIDER_ERROR: render did not complete before deadline');" } },
+      { "id": "store", "kind": "call", "title": "Store Durably", "group": "Persist",
+        "with": { "capability": "asset.store.put", "payload": { "kind": "video", "role": "hero", "source_url": "={{ $json.url }}", "derived_from": "={{ $('Envelope In').first().json.payload.source_asset_ids || [] }}" } } }
+    ]
+  }
+}

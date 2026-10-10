@@ -1,0 +1,19 @@
+{
+  "extends": "prompt.image.compose",
+  "capability": {
+    "id": "prompt.image.compose.ui_abstract",
+    "version": "1.0.0",
+    "title": "Compose Image Prompts — Abstract / Conceptual",
+    "summary": "Bound by B2B software and professional services. The product is invisible, so the image carries a concept. Legibility at thumbnail size beats detail every time.",
+    "capability_tags": ["produce.image.prompt"],
+    "verticals": ["b2b_saas", "professional_services"],
+    "side_effects": "none",
+    "idempotent": true
+  },
+  "overrides": {
+    "compose": {
+      "system_append": "\n\nCONCEPTUAL DISCIPLINE\n- Two accent colours maximum, plus a neutral. More reads as noise in a feed.\n- Generous margins. The image will be cropped by at least one platform you are not designing for.\n- Geometric and diagrammatic over photographic. Shapes with clear relationships beat a literal scene.\n- Must remain legible at 120px wide. If the idea needs detail to survive, it is the wrong idea for this frame.\n- Banned outright: glowing brains, robot hands, circuit boards, binary rain, people pointing at screens, handshake imagery.",
+      "extra_prompt_fields": { "concept": { "type": "string", "description": "The single relationship the image depicts, in five words." } }
+    }
+  }
+}

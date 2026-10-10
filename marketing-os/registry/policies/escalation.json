@@ -1,0 +1,53 @@
+{
+  "id": "mos.escalation",
+  "version": "1.0.0",
+  "description": "What happens when something goes wrong or needs a human. Defined once, centrally, so no workflow has to invent its own unhappy path.",
+
+  "failure_ladder": [
+    { "step": 1, "action": "retry_same_provider", "when": "error.retryable and attempt < max_attempts", "backoff": "exponential_jitter" },
+    { "step": 2, "action": "advance_provider_chain", "when": "provider chain has a next entry and the failure is provider-shaped", "records": "fallback event + fallback_depth++" },
+    { "step": 3, "action": "degrade_gracefully", "when": "a lower-fidelity output still satisfies the brief", "examples": ["still image instead of generated clip", "stock/DAM asset instead of generation", "shorter variant count", "text-only post"] },
+    { "step": 4, "action": "partial_deliver", "when": "some channels succeeded", "note": "Never discard completed work because a sibling failed. Publish what is green, park what is not." },
+    { "step": 5, "action": "park_to_dlq", "when": "nothing above applies", "note": "Full envelope + provenance is preserved so the run can be replayed byte-identically after a fix." },
+    { "step": 6, "action": "notify_human", "channel": "ops_channel", "includes": ["trace_id", "failing capability", "last error", "replay command"] }
+  ],
+
+  "compensation": {
+    "policy": "Any capability with side_effects of external_write or publish MUST declare a compensation capability. On a downstream hard failure the orchestrator walks the provenance array backwards and invokes each compensation in reverse order.",
+    "examples": {
+      "dist.publish.linkedin": "dist.unpublish.linkedin",
+      "dist.publish.blog": "dist.unpublish.blog",
+      "asset.store.put": "asset.store.delete",
+      "dist.schedule.enqueue": "dist.schedule.cancel"
+    },
+    "note": "Telegram sends and email broadcasts are NOT compensable — they are delivered the instant they are made. Those are exactly the capabilities that carry the strictest approval gates."
+  },
+
+  "human_gates": {
+    "modes": {
+      "none": "Autonomous. Available only to tenants above the trust threshold on unregulated verticals and organic channels.",
+      "sampled": "A configurable percentage is held for review; the rest flows. Keeps a human in the loop without making them the bottleneck.",
+      "always": "Every item held.",
+      "channel_conditional": "Held based on channel blast radius: paid and owned-list channels always held, organic social sampled, internal drafts never."
+    },
+    "request": { "capability": "approve.human.request", "surfaces": ["telegram", "slack", "email", "web_inbox"], "payload": ["preview_render", "brief_summary", "gate_findings", "cost_so_far", "approve/reject/edit buttons"] },
+    "timeout": { "default_hours": 24, "on_timeout": "escalate_then_expire", "escalate_to": "tenant_owner", "expire_action": "park_not_publish", "note": "Silence is never consent. An unanswered approval expires into the parked state, it does not fall through into a post." }
+  },
+
+  "trust_ladder": {
+    "description": "How a tenant earns autonomy. Mechanical, observable, and reversible — not a checkbox someone ticks on day one.",
+    "levels": [
+      { "level": 0, "name": "warmup", "criteria": "fewer than 5 completed runs", "autonomy": "draft" },
+      { "level": 1, "name": "supervised", "criteria": "5+ runs, human approval rate >= 0.8", "autonomy": "publish_with_approval" },
+      { "level": 2, "name": "sampled", "criteria": "25+ runs, approval rate >= 0.9, zero compliance blocks in 30d", "autonomy": "publish_with_approval", "approval_mode": "sampled" },
+      { "level": 3, "name": "autonomous_organic", "criteria": "100+ runs, approval rate >= 0.95, zero compliance blocks in 90d, unregulated vertical", "autonomy": "publish_autonomous", "restricted_to": ["organic social", "owned blog"] }
+    ],
+    "demotion": "Any compliance block, any human rejection for a factual error, or any published-then-deleted item drops the tenant one level immediately."
+  },
+
+  "alerting": {
+    "page": ["circuit_open on a publish adapter", "compliance block rate > 5% in 1h", "budget_exceeded on a tenant", "DLQ depth > 25"],
+    "notify": ["fallback_depth >= 2 sustained", "approval timeout", "provider p95 latency > 2x baseline"],
+    "digest": ["daily cost by tenant and capability", "creative score movement", "top/bottom variants"]
+  }
+}

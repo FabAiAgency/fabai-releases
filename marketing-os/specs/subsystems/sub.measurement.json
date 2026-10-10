@@ -1,0 +1,39 @@
+{
+  "capability": {
+    "id": "sub.measurement",
+    "version": "1.0.0",
+    "layer": "subsystem",
+    "title": "Measurement & Learning",
+    "summary": "Closes the loop. Collects metrics, normalises them across channels, scores creative against the vertical's own benchmarks, and proposes — never silently applies — profile adjustments. Without this the system is a content printer; with it, it compounds.",
+    "owner": "measurement",
+    "maturity": "beta",
+    "capability_tags": ["subsystem.measurement"],
+    "side_effects": "internal_write",
+    "idempotent": true,
+    "sla": { "p50_ms": 15000, "p95_ms": 60000, "timeout_ms": 300000 },
+    "requires": { "capabilities": ["measure.metrics.collect", "measure.creative.score", "learn.playbook.update"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 3 }
+  },
+  "n8n": {
+    "trigger": { "kind": "schedule", "cron": "0 7 * * *" },
+    "nodes": [
+      { "id": "collect", "kind": "call", "title": "Collect Metrics", "group": "Measure",
+        "with": { "capability": "measure.metrics.collect" } },
+      { "id": "score", "kind": "call", "title": "Score Creative", "group": "Measure",
+        "with": { "capability": "measure.creative.score" } },
+      { "id": "decisive", "kind": "if", "title": "Any Decisive Results?", "group": "Learn",
+        "with": { "condition": "={{ !!$json.winner }}" },
+        "next": { "true": "learn", "false": "hold" } },
+      { "id": "learn", "kind": "call", "title": "Propose Playbook Update", "group": "Learn",
+        "with": { "capability": "learn.playbook.update" }, "next": "digest" },
+      { "id": "hold", "kind": "set", "title": "Insufficient Signal", "group": "Learn",
+        "with": { "assignments": { "learning": "skipped", "reason": "no result reached the impression threshold; reallocating on this data would be chasing noise" } },
+        "next": "digest" },
+      { "id": "digest", "kind": "code", "title": "Build Digest", "group": "Report",
+        "with": { "code": "const s = $('Score Creative').first().json;\nconst ranked = (s.scored || []).filter(x => x.score != null).sort((a, b) => b.score - a.score);\nreturn [{ json: {\n  period: { to: new Date().toISOString(), window_days: 1 },\n  assets_scored: ranked.length,\n  top: ranked.slice(0, 3).map(x => ({ channel: x.channel, score: Number(x.score.toFixed(3)), confidence: Number(x.confidence.toFixed(2)), impressions: x.impressions })),\n  bottom: ranked.slice(-3).map(x => ({ channel: x.channel, score: Number(x.score.toFixed(3)), impressions: x.impressions })),\n  proposals: $('Propose Playbook Update').first()?.json?.proposals || [],\n  note: s.note || null\n} }];" } },
+      { "id": "send", "kind": "telegram", "title": "Send Digest", "group": "Report",
+        "with": { "operation": "sendMessage", "chatId": "={{ $env.MOS_REVIEW_CHAT_ID }}", "text": "={{ JSON.stringify($json, null, 2) }}" } }
+    ]
+  }
+}

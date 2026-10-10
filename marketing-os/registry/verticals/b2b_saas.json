@@ -1,0 +1,106 @@
+{
+  "id": "b2b_saas",
+  "title": "B2B Software / Technology",
+  "extends": "generic",
+  "description": "Committee purchase, long cycle, the product is invisible. The creative problem is making an abstraction concrete without resorting to a screenshot nobody can read on a phone.",
+
+  "taxonomy": {
+    "offer_types": ["subscription", "product_digital", "lead_magnet", "event"],
+    "buyer_type_default": "b2b_midmarket",
+    "buying_cycle_days": 90,
+    "decision_makers": ["end user / champion", "department head (economic buyer)", "IT / security", "finance / procurement"],
+    "purchase_triggers": ["a tool being replaced", "headcount growth", "a failed audit or incident", "budget cycle", "a new leader with a mandate"],
+    "geo_scope_default": "global"
+  },
+
+  "message": {
+    "proof_types": ["case_study", "stat", "demo", "certification", "roster", "press"],
+    "objection_library": ["we can build this internally", "migration will break things", "security review will kill it", "the team won't adopt it", "we're locked into a contract", "prove ROI before I ask for budget"],
+    "angle_library": ["cost of the status quo", "workflow before/after", "mechanism reveal", "the metric nobody is watching", "integration story", "security posture", "adoption story from a peer company"],
+    "lexicon": {
+      "prefer": ["time saved per week", "named integrations", "role names", "specific workflow verbs"],
+      "avoid": ["end-to-end platform", "AI-powered", "next-generation", "synergy", "digital transformation", "best-in-class"],
+      "banned": ["guaranteed ROI", "10x your revenue", "replaces your whole team"]
+    },
+    "tone_default": ["precise", "peer-to-peer", "low hype, high specificity"],
+    "reading_level": 10
+  },
+
+  "channels": {
+    "weights": { "linkedin": 0.35, "blog": 0.25, "email": 0.2, "youtube": 0.1, "x": 0.1 },
+    "formats": { "linkedin": ["post", "document_carousel", "video"], "blog": ["article"], "email": ["broadcast", "sequence_step"], "youtube": ["long", "short"] },
+    "excluded": ["tiktok", "google_business"]
+  },
+
+  "creative": {
+    "image_style": "abstract-but-legible product metaphor, generous negative space, restrained two-colour palette, diagrammatic clarity, no literal dashboard screenshots",
+    "image_negative": "unreadable UI screenshot, stock businesspeople, glowing brain, circuit-board cliché, robot hand touching screen",
+    "video_style": "screen-recorded proof intercut with a narrated point; the demo IS the hook",
+    "shot_grammar": ["problem stated as a workflow", "the painful current step", "the replacement step", "the measured result", "who it is for", "cta"],
+    "aspect_ratios": ["1:1", "16:9", "4:5"],
+    "default_duration_s": 45,
+    "voice": { "gender": "neutral", "pace": "brisk", "style": "explanatory" },
+    "asset_reuse_bias": 0.7
+  },
+
+  "compliance": { "profile": "standard", "regulated_claims": ["security certification", "uptime guarantee", "customer count", "ROI figures"], "review_mode": "sampled" },
+
+  "kpis": [
+    { "metric": "qualified_pipeline", "primary": true, "benchmark": null },
+    { "metric": "demo_requests", "primary": true, "benchmark": null },
+    { "metric": "click_through_rate", "primary": false, "benchmark": 0.012 },
+    { "metric": "content_assisted_conversions", "primary": false, "benchmark": null }
+  ],
+
+  "capability_bindings": {
+    "produce.image.prompt": "prompt.image.compose.ui_abstract",
+    "assemble.video": "media.video.render.explainer_wide"
+  },
+
+  "plays": [
+    {
+      "id": "objection_teardown",
+      "title": "Objection teardown series",
+      "objective": "demand_gen",
+      "when": "Sales reports a recurring objection, or win/loss data names a blocker.",
+      "steps": [
+        { "tag": "plan.brief" },
+        { "tag": "research.market", "with": { "focus": "how competitors answer this objection" } },
+        { "tag": "produce.copy.longform", "with": { "structure": "objection -> why it is reasonable -> the actual mechanics -> proof -> what to do next" } },
+        { "tag": "produce.copy.short", "with": { "derive_from": "longform", "variants": 4, "channel": "linkedin" } },
+        { "tag": "produce.image.prompt" },
+        { "tag": "produce.image" },
+        { "tag": "verify.brand" },
+        { "tag": "approve.human" },
+        { "tag": "distribute.publish", "with": { "fan_out": "per_channel" } },
+        { "tag": "measure.collect" }
+      ],
+      "expected_kpi": "qualified_pipeline"
+    },
+    {
+      "id": "customer_proof_engine",
+      "title": "Case study to multi-channel proof",
+      "objective": "conversion",
+      "when": "A customer result is verifiable and the customer has consented to be named.",
+      "steps": [
+        { "tag": "plan.brief" },
+        { "tag": "research.product", "with": { "source": "crm_and_usage_data" } },
+        { "tag": "produce.copy.longform", "with": { "structure": "case_study" } },
+        { "tag": "produce.script", "with": { "duration_s": 45 } },
+        { "tag": "produce.video.clip" },
+        { "tag": "assemble.video" },
+        { "tag": "verify.compliance", "with": { "check": "customer consent on file" } },
+        { "tag": "approve.human" },
+        { "tag": "distribute.publish" }
+      ],
+      "expected_kpi": "demo_requests"
+    }
+  ],
+
+  "prompt_fragments": {
+    "voice": "You are writing for someone who evaluates tools for a living and has been disappointed before. Name the workflow, name the role, name the number. Skip the category-definition paragraph entirely.",
+    "proof_instruction": "Prefer a customer name and a measured delta over an adjective. If the metric is not in the brief, describe the mechanism instead of inventing a figure.",
+    "visual_instruction": "Render the CONCEPT of the workflow, not the interface. Diagrammatic, two accent colours maximum, wide margins, reads at thumbnail size.",
+    "objection_instruction": "Address the security and migration objections explicitly whenever the audience includes IT or procurement — silence on those reads as evasion."
+  }
+}

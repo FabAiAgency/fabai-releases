@@ -1,0 +1,51 @@
+{
+  "capability": {
+    "id": "plan.campaign.compose",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Compose Campaign Plan",
+    "summary": "Brief in, an executable DAG of capability TAGS out — plus a cost estimate before a cent is spent. Selects from the vertical's declared plays rather than inventing a pipeline, which is what keeps an autonomous planner inside a shape operators have agreed to.",
+    "owner": "strategy",
+    "maturity": "ga",
+    "capability_tags": ["plan.campaign"],
+    "side_effects": "none",
+    "idempotent": true,
+    "providers": [{ "name": "anthropic", "model": "claude-opus-5", "tier": "frontier", "cost_per_unit_minor": 5, "unit": "call" }],
+    "sla": { "p50_ms": 7000, "p95_ms": 25000, "timeout_ms": 90000 },
+    "retry": { "max_attempts": 2, "backoff": "exponential", "base_ms": 3000 },
+    "requires": { "secrets": ["ANTHROPIC_API_KEY", "MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 5 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "options", "kind": "code", "title": "Enumerate Eligible Plays", "group": "Plan",
+        "with": { "code": "// The model NEVER free-forms a pipeline. It picks from plays the vertical declared and\n// that survive hard filters. Pre-filtering here is what makes the choice auditable.\nconst b = $json.payload.brief;\nconst profile = $json.payload.profile || {};\nconst plays = profile.plays || [];\nconst channels = new Set((b.channels || []).map(c => c.channel));\nconst excluded = new Set(profile.channels?.excluded || []);\n\nconst eligible = [], rejected = [];\nfor (const play of plays) {\n  const reasons = [];\n  if (play.objective && b.objective && play.objective !== b.objective) reasons.push('objective_mismatch');\n  const needsVideo = play.steps.some(s => s.tag === 'assemble.video');\n  const wantsVideo = (b.assets?.required_kinds || []).includes('video') || [...channels].some(c => ['tiktok', 'youtube'].includes(c));\n  if (needsVideo && !wantsVideo && (b.budget_minor_units ?? Infinity) < 500) reasons.push('video_not_requested_and_budget_thin');\n  if ([...channels].every(c => excluded.has(c))) reasons.push('all_channels_excluded_by_vertical');\n  (reasons.length ? rejected : eligible).push({ id: play.id, title: play.title, when: play.when, steps: play.steps.map(s => s.tag), eliminated_by: reasons[0] || null });\n}\n\nreturn [{ json: { eligible: eligible.slice(0, 5), rejected, brief: b, profile } }];" } },
+      { "id": "select", "kind": "llm", "title": "Select Play", "group": "Plan",
+        "with": { "role": "reasoning.planner",
+          "system": "You select ONE play from an enumerated list and adapt its parameters to the brief.\n\nYou may NOT invent a play, add a step that is not in the chosen play, or reorder steps that have a data dependency. You MAY set per-step parameters: variant counts, channels, durations, locales, whether to research.\n\nIf no listed play fits, say so with `no_fit: true` and explain in one sentence. The system will ask a human rather than improvise — an improvised pipeline is one nobody has agreed to pay for.\n\nSelection criteria in order: objective match, channel fit, evidence available in the brief, cost proportionality to the stated budget.",
+          "prompt": "BRIEF:\n{{ JSON.stringify($json.brief) }}\n\nELIGIBLE PLAYS:\n{{ JSON.stringify($json.eligible) }}\n\nREJECTED (do not select these; shown so you understand the space):\n{{ JSON.stringify($json.rejected) }}\n\nBUDGET (minor units): {{ $json.brief.budget_minor_units ?? 'unspecified' }}",
+          "structured": { "type": "object", "required": ["chosen_play", "confidence", "rationale"], "properties": {
+            "chosen_play": { "type": "string" },
+            "no_fit": { "type": "boolean" },
+            "confidence": { "type": "number" },
+            "rationale": { "type": "string" },
+            "step_params": { "type": "object", "description": "step tag -> parameter overrides" },
+            "channel_allocation": { "type": "array", "items": { "type": "object", "properties": { "channel": { "type": "string" }, "format": { "type": "string" }, "variants": { "type": "integer" } } } }
+          } } } },
+      { "id": "expand", "kind": "code", "title": "Expand to DAG", "group": "Plan",
+        "with": { "code": "// Expand the chosen play into a DAG of TAGS (not capability ids). Binding tags to concrete\n// implementations happens later, per vertical, at execution time — that late binding is the\n// whole reason one plan runs correctly for a plumber and a SaaS.\nconst sel = $json.output || $json;\nconst ctx = $('Enumerate Eligible Plays').first().json;\nif (sel.no_fit) return [{ json: { no_fit: true, rationale: sel.rationale, action: 'ask_human' } }];\n\nconst play = (ctx.profile.plays || []).find(p => p.id === sel.chosen_play);\nif (!play) throw new Error('VALIDATION_FAILED: selected play not found in profile: ' + sel.chosen_play);\n\nconst nodes = play.steps.map((s, i) => ({\n  id: `n${i}`,\n  tag: s.tag,\n  params: { ...(s.with || {}), ...((sel.step_params || {})[s.tag] || {}) },\n  parallel_group: s.parallel_group || null,\n  depends_on: i === 0 ? [] : (s.parallel_group && play.steps[i - 1]?.parallel_group === s.parallel_group ? play.steps.slice(0, i).filter(x => x.parallel_group !== s.parallel_group).map((_, j) => `n${j}`).slice(-1) : [`n${i - 1}`])\n}));\n\nreturn [{ json: {\n  plan_id: 'pln_' + $('Envelope In').first().json.trace_id.slice(0, 12),\n  play: play.id,\n  play_title: play.title,\n  nodes,\n  channel_allocation: sel.channel_allocation || ctx.brief.channels,\n  confidence: sel.confidence,\n  rationale: sel.rationale,\n  expected_kpi: play.expected_kpi || null\n} }];" } },
+      { "id": "estimate", "kind": "http", "title": "Estimate Cost", "group": "Plan",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/planner/estimate", "auth": "headerAuth",
+          "body": { "nodes": "={{ $json.nodes }}", "channel_allocation": "={{ $json.channel_allocation }}", "vertical": "={{ $('Envelope In').first().json.vertical }}" },
+          "note": "Cost is estimated from the capability registry's cost_model entries BEFORE execution. A plan that exceeds the brief's budget is re-scoped or surfaced, never silently half-run." },
+        "onError": "continue" },
+      { "id": "affordable", "kind": "if", "title": "Within Budget?", "group": "Plan",
+        "with": { "condition": "={{ ($json.estimate_minor_units ?? 0) <= ($('Envelope In').first().json.budget?.cap_minor_units ?? Infinity) }}" },
+        "next": { "true": null, "false": "rescope" } },
+      { "id": "rescope", "kind": "code", "title": "Re-scope to Budget", "group": "Plan",
+        "with": { "code": "// Drop lowest-priority channels and variant counts until the plan fits, and SAY what was\n// dropped. A silently truncated campaign is indistinguishable from a broken one.\nconst plan = $('Expand to DAG').first().json;\nconst cap = $('Envelope In').first().json.budget?.cap_minor_units ?? 0;\nconst alloc = [...(plan.channel_allocation || [])].sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3));\nconst dropped = [];\nwhile (alloc.length > 1 && ($json.estimate_minor_units ?? 0) > cap) { dropped.push(alloc.pop()); }\nfor (const a of alloc) if ((a.variants ?? 1) > 1) a.variants = Math.max(1, Math.floor(a.variants / 2));\nreturn [{ json: { ...plan, channel_allocation: alloc, rescoped: true, dropped_channels: dropped.map(d => d.channel), note: dropped.length ? `Budget cap ${cap} required dropping: ${dropped.map(d => d.channel).join(', ')}` : 'Variant counts reduced to fit budget.' } }];" } }
+    ]
+  }
+}

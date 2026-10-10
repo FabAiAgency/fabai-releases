@@ -1,0 +1,43 @@
+{
+  "capability": {
+    "id": "learn.playbook.update",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Update Playbook from Results",
+    "summary": "The learning step. Proposes adjustments to channel weights, angle preferences and reuse bias from decisive results — and PROPOSES is the operative word: profile changes are versioned and require approval, because an autonomous system that silently rewrites its own strategy cannot be reasoned about.",
+    "owner": "measurement",
+    "maturity": "experimental",
+    "capability_tags": ["learn.update"],
+    "side_effects": "internal_write",
+    "idempotent": true,
+    "compensation": "learn.playbook.revert",
+    "providers": [{ "name": "anthropic", "model": "claude-sonnet-5", "tier": "standard", "cost_per_unit_minor": 3, "unit": "call" }],
+    "sla": { "p50_ms": 5000, "p95_ms": 20000, "timeout_ms": 90000 },
+    "requires": { "secrets": ["ANTHROPIC_API_KEY", "MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 3 }
+  },
+  "n8n": {
+    "trigger": { "kind": "schedule", "cron": "0 6 * * 1" },
+    "nodes": [
+      { "id": "window", "kind": "http", "title": "Load 30d Decisive Results", "group": "Learn",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/analytics/decisive?window_days=30&min_confidence=1", "auth": "headerAuth" } },
+      { "id": "sufficient", "kind": "if", "title": "Enough Signal?", "group": "Learn",
+        "with": { "condition": "={{ ($json.results || []).length >= 20 }}",
+          "note": "Below twenty decisive results this is pattern-matching on noise. Skipping is the correct behaviour, and it is recorded as a decision so the silence is explicable." },
+        "next": { "true": "analyse", "false": "skip" } },
+      { "id": "analyse", "kind": "llm", "title": "Propose Adjustments", "group": "Learn",
+        "with": { "role": "reasoning.planner",
+          "system": "You propose adjustments to a vertical profile from measured results.\n\nRULES\n- Propose only what the data supports. A channel with four posts has not earned a weight change.\n- Every proposal names its evidence: the metric, the sample size, the effect size.\n- Never propose a change to compliance settings, autonomy ceilings or banned lexicon. Those are governance, not performance, and are out of scope for you entirely.\n- Bound each weight change to +/- 0.1 absolute. Strategy should move like a rudder, not a switch.\n- If the honest answer is 'no change', say so.",
+          "prompt": "VERTICAL: {{ $('Envelope In').first().json.vertical }}\nCURRENT PROFILE:\n{{ JSON.stringify($('Envelope In').first().json.payload.profile) }}\n\nDECISIVE RESULTS (30d):\n{{ JSON.stringify($json.results) }}",
+          "structured": { "type": "object", "required": ["proposals"], "properties": { "proposals": { "type": "array", "items": { "type": "object", "required": ["path", "from", "to", "evidence"], "properties": { "path": { "type": "string" }, "from": {}, "to": {}, "evidence": { "type": "string" }, "sample_size": { "type": "integer" }, "effect_size": { "type": "number" } } } }, "no_change_rationale": { "type": "string" } } } } },
+      { "id": "guard", "kind": "code", "title": "Reject Out-of-Scope Proposals", "group": "Learn",
+        "with": { "code": "// Belt and braces: even if the model proposed a governance change, it never reaches the queue.\nconst FORBIDDEN = [/^compliance/, /autonomy/, /banned/, /required_disclaimers/, /capability_bindings/];\nconst out = $json.output || $json;\nconst kept = [], rejected = [];\nfor (const p of (out.proposals || [])) {\n  if (FORBIDDEN.some(re => re.test(p.path))) rejected.push({ ...p, reason: 'out_of_scope_for_automated_learning' });\n  else if ((p.sample_size ?? 0) < 10) rejected.push({ ...p, reason: 'insufficient_sample' });\n  else kept.push(p);\n}\nreturn [{ json: { proposals: kept, rejected, requires_approval: kept.length > 0 } }];" } },
+      { "id": "queue", "next": null, "kind": "http", "title": "Queue for Approval", "group": "Learn",
+        "with": { "method": "POST", "url": "={{ $env.MOS_STATE_URL }}/registry/proposals", "auth": "headerAuth",
+          "body": { "vertical": "={{ $('Envelope In').first().json.vertical }}", "tenant_id": "={{ $('Envelope In').first().json.tenant_id }}", "proposals": "={{ $json.proposals }}", "status": "pending_approval" } } },
+      { "id": "skip", "kind": "set", "title": "No Change", "group": "Learn",
+        "with": { "assignments": { "proposals": [], "skipped_reason": "insufficient_decisive_results" } } }
+    ]
+  }
+}

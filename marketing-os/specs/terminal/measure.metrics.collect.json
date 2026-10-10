@@ -1,0 +1,35 @@
+{
+  "capability": {
+    "id": "measure.metrics.collect",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Collect Channel Metrics",
+    "summary": "Pulls per-post metrics back from each channel and writes them onto the ASSET, not just a report. That write-back is what closes the loop: tomorrow's asset search can filter on what actually worked.",
+    "owner": "measurement",
+    "maturity": "beta",
+    "capability_tags": ["measure.collect"],
+    "side_effects": "internal_write",
+    "idempotent": true,
+    "sla": { "p50_ms": 2000, "p95_ms": 9000, "timeout_ms": 60000 },
+    "retry": { "max_attempts": 3, "backoff": "exponential", "base_ms": 5000 },
+    "requires": { "secrets": ["MOS_STATE_URL"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": { "kind": "schedule", "cron": "0 */6 * * *" },
+    "nodes": [
+      { "id": "due", "kind": "http", "title": "Publications Due for Sync", "group": "Collect",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/publish/due-for-sync?max_age_days=30", "auth": "headerAuth" } },
+      { "id": "split", "kind": "splitOut", "title": "Per Publication", "group": "Collect", "with": { "field": "publications" } },
+      { "id": "fetch", "kind": "http", "title": "Fetch Channel Metrics", "group": "Collect",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/connectors/{{ $json.channel }}/metrics/{{ $json.external_id }}", "auth": "headerAuth" },
+        "onError": "continue" },
+      { "id": "normalise", "kind": "code", "title": "Normalise Across Channels", "group": "Normalise",
+        "with": { "code": "// Every channel names the same thing differently. Normalising here is what lets one\n// creative score compare a LinkedIn post against a TikTok video against an email.\nconst m = $json.metrics || {};\nconst pick = (...k) => { for (const x of k) if (m[x] != null) return Number(m[x]); return null; };\nconst impressions = pick('impressions', 'views', 'reach', 'plays', 'delivered');\nconst engagements = pick('engagements', 'likes', 'reactions', 'total_interactions');\nconst clicks = pick('clicks', 'link_clicks', 'unique_clicks', 'website_clicks');\nconst conversions = pick('conversions', 'purchases', 'leads', 'bookings');\nreturn [{ json: {\n  publication_id: $json.publication_id,\n  asset_ids: $json.asset_ids || [],\n  channel: $json.channel,\n  impressions, engagements, clicks, conversions,\n  spend_minor_units: pick('spend', 'cost') ?? 0,\n  engagement_rate: impressions ? (engagements ?? 0) / impressions : null,\n  ctr: impressions ? (clicks ?? 0) / impressions : null,\n  cvr: clicks ? (conversions ?? 0) / clicks : null,\n  watch_through_rate: m.video_views_p100 && m.plays ? m.video_views_p100 / m.plays : null,\n  collected_at: new Date().toISOString()\n} }];" } },
+      { "id": "writeback", "kind": "http", "title": "Write Back to Asset", "group": "Learn",
+        "with": { "method": "PATCH", "url": "={{ $env.MOS_STATE_URL }}/dam/assets/performance", "auth": "headerAuth",
+          "body": { "asset_ids": "={{ $json.asset_ids }}", "performance": "={{ $json }}" } } }
+    ]
+  }
+}

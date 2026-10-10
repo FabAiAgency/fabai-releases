@@ -1,0 +1,28 @@
+{
+  "capability": {
+    "id": "asset.ledger.append",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Append to Run Ledger",
+    "summary": "One row per produced or published artefact in a human-readable sheet, plus the machine telemetry row. The original workflows logged to Sheets ad hoc with different columns each time; a single schema here is what makes a cross-estate dashboard possible at all.",
+    "owner": "platform",
+    "maturity": "ga",
+    "capability_tags": ["asset.log"],
+    "side_effects": "external_write",
+    "idempotent": true,
+    "sla": { "p50_ms": 700, "p95_ms": 3000, "timeout_ms": 30000 },
+    "retry": { "max_attempts": 3, "backoff": "exponential", "base_ms": 1500 },
+    "requires": { "secrets": ["GOOGLE_SHEETS_OAUTH"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "row", "kind": "code", "title": "Build Ledger Row", "group": "Log",
+        "with": { "code": "const e = $('Envelope In').first().json;\nconst p = e.payload || {};\nreturn [{ json: {\n  timestamp: new Date().toISOString(),\n  trace_id: e.trace_id,\n  tenant_id: e.tenant_id,\n  brand_id: e.brand_id || '',\n  vertical: e.vertical || 'generic',\n  stage: e.stage,\n  capability: p.capability || '',\n  asset_id: p.asset_id || '',\n  asset_kind: p.kind || '',\n  asset_url: p.public_url || '',\n  channel: p.channel || '',\n  title: p.title || '',\n  prompt: (p.prompt || '').slice(0, 500),\n  model: p.model || '',\n  provider: p.provider || '',\n  cost_minor_units: p.cost_minor_units ?? '',\n  brand_check: p.brand_status || '',\n  compliance_check: p.compliance_status || '',\n  approval: p.approval_status || '',\n  decision_id: p.decision_id || '',\n  status: p.status || 'ok'\n} }];" } },
+      { "id": "append", "kind": "gsheets", "title": "Append Row", "group": "Log",
+        "with": { "operation": "append", "documentId": "={{ $env.MOS_LEDGER_SHEET_ID }}", "sheetName": "run_ledger", "mappingMode": "autoMapInputData" } }
+    ]
+  }
+}

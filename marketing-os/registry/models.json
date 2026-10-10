@@ -1,0 +1,76 @@
+{
+  "version": "1.0.0",
+  "description": "Model routing as data. Units ask for a ROLE (`reasoning.planner`) and a TIER, never a vendor string. Swapping a provider is an edit here, not a sweep through every workflow — and the cost governor can downgrade a tier under budget pressure without any workflow knowing.",
+  "tiers": ["nano", "small", "standard", "frontier"],
+  "roles": {
+    "reasoning.planner": {
+      "purpose": "Brief synthesis, play selection, campaign DAG planning. The only place worth paying frontier prices.",
+      "chain": [
+        { "tier": "frontier", "provider": "anthropic", "model": "claude-opus-5" },
+        { "tier": "standard", "provider": "anthropic", "model": "claude-sonnet-5" },
+        { "tier": "standard", "provider": "openai", "model": "gpt-4.1" }
+      ],
+      "temperature": 0.3, "max_output_tokens": 8000, "structured_output": true
+    },
+    "reasoning.router": {
+      "purpose": "Gray-zone routing decisions only. Small, fast, constrained to an enumerated option set.",
+      "chain": [
+        { "tier": "small", "provider": "anthropic", "model": "claude-haiku-4-5-20251001" },
+        { "tier": "standard", "provider": "openai", "model": "gpt-4.1-mini" }
+      ],
+      "temperature": 0, "max_output_tokens": 800, "structured_output": true
+    },
+    "copy.longform": {
+      "purpose": "Blog, article, email sequences, scripts.",
+      "chain": [
+        { "tier": "standard", "provider": "anthropic", "model": "claude-sonnet-5" },
+        { "tier": "standard", "provider": "openai", "model": "gpt-4.1" }
+      ],
+      "temperature": 0.7, "max_output_tokens": 16000
+    },
+    "copy.short": {
+      "purpose": "Social posts, captions, headlines, CTAs, ad variants.",
+      "chain": [
+        { "tier": "small", "provider": "anthropic", "model": "claude-haiku-4-5-20251001" },
+        { "tier": "standard", "provider": "openai", "model": "gpt-4.1-mini" }
+      ],
+      "temperature": 0.8, "max_output_tokens": 2000
+    },
+    "prompt.visual": {
+      "purpose": "Turning a brief + vertical creative grammar into image/video prompts. Structured output is mandatory.",
+      "chain": [
+        { "tier": "small", "provider": "openai", "model": "gpt-4.1-mini" },
+        { "tier": "small", "provider": "anthropic", "model": "claude-haiku-4-5-20251001" }
+      ],
+      "temperature": 0.9, "max_output_tokens": 3000, "structured_output": true
+    },
+    "vision.critic": {
+      "purpose": "Brand and quality scoring of generated imagery before it costs a render or a post.",
+      "chain": [
+        { "tier": "small", "provider": "anthropic", "model": "claude-haiku-4-5-20251001" },
+        { "tier": "standard", "provider": "openai", "model": "gpt-4.1" }
+      ],
+      "temperature": 0, "structured_output": true
+    },
+    "classify.intent": {
+      "purpose": "Intake classification, compliance pre-screen, dedupe. High volume, must be cheap.",
+      "chain": [{ "tier": "nano", "provider": "openai", "model": "gpt-4.1-nano" }, { "tier": "small", "provider": "anthropic", "model": "claude-haiku-4-5-20251001" }],
+      "temperature": 0, "max_output_tokens": 500, "structured_output": true
+    },
+    "transcribe.audio": { "purpose": "Voice-note intake.", "chain": [{ "tier": "small", "provider": "openai", "model": "whisper-1" }] },
+    "image.generate": { "purpose": "Stills.", "chain": [{ "tier": "standard", "provider": "openai", "model": "gpt-image-1" }, { "tier": "standard", "provider": "higgsfield", "model": "hf_image" }] },
+    "image.edit": { "purpose": "Inpaint, background swap, variant from reference.", "chain": [{ "tier": "standard", "provider": "openai", "model": "gpt-image-1" }, { "tier": "standard", "provider": "higgsfield", "model": "hf_edit" }] },
+    "video.clip": { "purpose": "Image-to-video and text-to-video clips.", "chain": [{ "tier": "standard", "provider": "higgsfield", "model": "hf_video" }, { "tier": "standard", "provider": "fal", "model": "kling-2" }] },
+    "audio.voice": { "purpose": "Voiceover.", "chain": [{ "tier": "standard", "provider": "elevenlabs", "model": "eleven_multilingual_v2" }, { "tier": "small", "provider": "openai", "model": "tts-1-hd" }] },
+    "video.render": { "purpose": "Timeline composition, captions, music bed, brand end-card.", "chain": [{ "tier": "standard", "provider": "creatomate", "model": "render_v2" }, { "tier": "standard", "provider": "shotstack", "model": "render" }] },
+    "embed.text": { "purpose": "DAM semantic search + dedupe.", "chain": [{ "tier": "nano", "provider": "openai", "model": "text-embedding-3-large" }] }
+  },
+  "downgrade_map": { "frontier": "standard", "standard": "small", "small": "nano", "nano": "nano" },
+  "policy": {
+    "on_provider_error": "advance_chain",
+    "on_rate_limit": "backoff_then_advance_chain",
+    "on_budget_soft_limit": "downgrade_tier",
+    "never_downgrade_roles": ["reasoning.planner", "vision.critic"],
+    "note": "Planning and QA keep their quality under budget pressure; volume production is what degrades. Cheap planning produces expensive mistakes."
+  }
+}

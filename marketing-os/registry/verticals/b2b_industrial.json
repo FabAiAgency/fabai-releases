@@ -1,0 +1,96 @@
+{
+  "id": "b2b_industrial",
+  "title": "B2B Industrial / Manufacturing / Distribution",
+  "extends": "b2b_saas",
+  "description": "Long cycles, specification-driven buyers, distribution through reps and dealers. Inherits the committee mechanics of B2B software and replaces the aesthetic and the proof economy: here the spec sheet is the creative.",
+
+  "taxonomy": {
+    "offer_types": ["product_physical", "service", "bundle", "event"],
+    "buyer_type_default": "b2b_enterprise",
+    "buying_cycle_days": 180,
+    "decision_makers": ["plant or operations engineer", "maintenance lead", "procurement", "EHS / compliance officer", "distributor or rep"],
+    "purchase_triggers": ["unplanned downtime", "a failed inspection", "capacity expansion", "a discontinued part", "regulatory change", "capital budget release"],
+    "geo_scope_default": "national",
+    "seasonality": [{ "window": "capital_budget_q4", "modifier": 1.6 }, { "window": "trade_show_season", "modifier": 1.8 }]
+  },
+
+  "message": {
+    "proof_types": ["certification", "stat", "case_study", "demo", "warranty", "award"],
+    "objection_library": ["will it integrate with the line we already run", "what is the lead time on spares", "is it certified for our jurisdiction", "what is the total cost including downtime to install", "who services it locally", "our people are trained on the incumbent"],
+    "angle_library": ["downtime cost arithmetic", "spec comparison", "failure mode explained", "the retrofit path", "certification walkthrough", "maintenance interval reality", "total cost of ownership over 5 years"],
+    "lexicon": { "prefer": ["tolerances", "duty cycles", "standards numbers", "MTBF", "lead times", "part numbers"], "avoid": ["innovative solutions", "cutting edge", "partner of choice"], "banned": ["maintenance free", "never fails", "universally compatible"] },
+    "tone_default": ["technical", "unadorned", "respectful of the reader's expertise"],
+    "reading_level": 11
+  },
+
+  "channels": {
+    "weights": { "linkedin": 0.3, "blog": 0.25, "email": 0.25, "youtube": 0.15, "product_listing": 0.05 },
+    "formats": { "linkedin": ["post", "document_carousel"], "blog": ["article"], "email": ["broadcast", "sequence_step"], "youtube": ["long"] },
+    "excluded": ["tiktok", "instagram"]
+  },
+
+  "creative": {
+    "image_style": "equipment in a real operating environment, correct PPE on any person in frame, accurate machine geometry, industrial lighting, callout-friendly composition with space for annotation",
+    "image_negative": "missing PPE, impossible mechanical linkage, sparks used decoratively, unsafe working posture, sterile render with no context",
+    "video_style": "narrated walkthrough of the mechanism or the install, annotated on screen, shot from an operator's eyeline",
+    "shot_grammar": ["failure or downtime scenario", "the mechanism explained", "spec callouts on screen", "install or retrofit path", "service and spares", "who to contact"],
+    "aspect_ratios": ["16:9", "1:1"],
+    "default_duration_s": 75,
+    "voice": { "gender": "neutral", "pace": "measured", "style": "technical narration" },
+    "asset_reuse_bias": 0.8
+  },
+
+  "compliance": { "profile": "standard", "regulated_claims": ["safety certification", "performance ratings", "emissions or efficiency figures", "compatibility claims"], "review_mode": "always" },
+
+  "kpis": [
+    { "metric": "spec_sheet_downloads", "primary": true, "benchmark": null },
+    { "metric": "distributor_enquiries", "primary": true, "benchmark": null },
+    { "metric": "rfq_volume", "primary": true, "benchmark": null },
+    { "metric": "trade_show_meetings_booked", "primary": false, "benchmark": null }
+  ],
+
+  "capability_bindings": { "assemble.video": "media.video.render.explainer_wide", "produce.image.prompt": "prompt.image.compose.field_proof" },
+
+  "plays": [
+    {
+      "id": "downtime_arithmetic",
+      "title": "Downtime cost arithmetic",
+      "objective": "demand_gen",
+      "when": "The buyer's pain is measurable in hours of stopped production — the one argument procurement cannot dismiss.",
+      "steps": [
+        { "tag": "plan.brief" },
+        { "tag": "research.product", "with": { "source": "spec_sheets_and_service_data" } },
+        { "tag": "produce.copy.longform", "with": { "structure": "worked calculation with stated assumptions" } },
+        { "tag": "produce.image", "with": { "set": "annotated_diagram" } },
+        { "tag": "produce.copy.short", "with": { "derive_from": "longform", "channel": "linkedin" } },
+        { "tag": "verify.compliance", "with": { "check": "performance figures traceable to a spec sheet" } },
+        { "tag": "approve.human" },
+        { "tag": "distribute.publish", "with": { "fan_out": "per_channel" } }
+      ],
+      "expected_kpi": "rfq_volume"
+    },
+    {
+      "id": "dealer_enablement",
+      "title": "Dealer / rep enablement pack",
+      "objective": "demand_gen",
+      "when": "Distribution partners need co-brandable material they will actually use.",
+      "steps": [
+        { "tag": "plan.brief" },
+        { "tag": "produce.copy.longform", "with": { "structure": "one-pager per SKU" } },
+        { "tag": "produce.image", "with": { "variants": 3, "constraint": "leave co-brand space" } },
+        { "tag": "verify.brand" },
+        { "tag": "approve.human" },
+        { "tag": "asset.store" },
+        { "tag": "distribute.publish", "with": { "channel": "email", "audience": "dealer_list" } }
+      ],
+      "expected_kpi": "distributor_enquiries"
+    }
+  ],
+
+  "prompt_fragments": {
+    "voice": "Your reader maintains this equipment and will catch a wrong figure instantly. Use the units. State assumptions. Never round a tolerance to make a sentence flow.",
+    "proof_instruction": "Standards numbers, certification marks, duty cycles and service intervals are the proof. An adjective is a red flag to this audience.",
+    "visual_instruction": "Every person in frame wears the correct PPE for the environment shown. Mechanical geometry must be plausible; leave clear space for spec callouts.",
+    "safety_instruction": "Never depict an unsafe practice, even incidentally in the background. In this vertical it is both a compliance failure and an instant credibility loss."
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "capability": {
+    "id": "copy.localize",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Localise Copy",
+    "summary": "Adapts copy into a target locale — not translation: currency, date format, idiom, proof conventions and the locale's own compliance variant. Separated from generation so a locale can be added without regenerating source copy.",
+    "owner": "content",
+    "maturity": "beta",
+    "capability_tags": ["produce.localize"],
+    "side_effects": "none",
+    "idempotent": true,
+    "providers": [{ "name": "anthropic", "model": "claude-sonnet-5", "tier": "standard", "cost_per_unit_minor": 2, "unit": "call" }],
+    "sla": { "p50_ms": 4000, "p95_ms": 15000, "timeout_ms": 60000 },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 2, "variable_by": ["locales"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "localize", "kind": "llm", "title": "Localise", "group": "Localise",
+        "with": { "role": "copy.longform",
+          "system": "You adapt marketing copy for a target locale.\n\nAdapt, do not translate: currency and units, date and number formats, idiom, humour, proof conventions (what counts as credible differs by market), formality register, and any legally required phrasing for that market.\n\nKeep: the angle, the claims and their qualifiers, the structure, the CTA's commitment level.\n\nFlag anything that does not transfer — a pun, a culturally specific reference, a claim that is legal in the source market and not in the target — rather than quietly dropping it.",
+          "prompt": "SOURCE ({{ $json.payload.source_locale }}):\n{{ JSON.stringify($json.payload.copy) }}\n\nTARGET LOCALE: {{ $json.payload.target_locale }}\nMARKET NOTES: {{ JSON.stringify($json.payload.market_notes || {}) }}",
+          "structured": { "type": "object", "required": ["copy", "locale"], "properties": {
+            "locale": { "type": "string" },
+            "copy": { "type": "object" },
+            "did_not_transfer": { "type": "array", "items": { "type": "object", "properties": { "original": { "type": "string" }, "reason": { "type": "string" }, "substitute": { "type": "string" } } } },
+            "requires_local_legal_review": { "type": "boolean" }
+          } } } },
+      { "id": "flag", "kind": "if", "title": "Needs Local Review?", "group": "Localise",
+        "with": { "condition": "={{ ($json.output || $json).requires_local_legal_review === true }}" },
+        "next": { "true": "mark", "false": null } },
+      { "id": "mark", "kind": "set", "title": "Mark for Local Review", "group": "Localise",
+        "with": { "assignments": { "approval_required": true, "approval_reason": "locale_legal_review", "reviewer_role": "local_market_reviewer" } } }
+    ]
+  }
+}

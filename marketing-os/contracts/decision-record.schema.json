@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fabai.dev/mos/contracts/decision-record.schema.json",
+  "title": "Decision Record",
+  "description": "Written every time the system chooses instead of merely executing. Answers, months later, 'why did it post that?' — with the inputs, the options it had, the layer that decided, and the cost of the decision.",
+  "type": "object",
+  "required": ["decision_id", "trace_id", "tenant_id", "kind", "chosen", "decided_by", "at"],
+  "properties": {
+    "decision_id": { "type": "string" },
+    "trace_id": { "type": "string" },
+    "span_id": { "type": ["string", "null"] },
+    "tenant_id": { "type": "string" },
+    "vertical": { "type": "string" },
+    "kind": {
+      "type": "string",
+      "enum": ["capability_binding", "play_selection", "channel_mix", "angle_selection", "asset_reuse_vs_generate", "provider_fallback", "approval_gate", "budget_downgrade", "clarification", "abort", "variant_winner"]
+    },
+    "question": { "type": "string" },
+    "options": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" }, "score": { "type": ["number", "null"] }, "eliminated_by": { "type": ["string", "null"] } } } },
+    "chosen": { "type": "string" },
+    "decided_by": { "type": "string", "enum": ["hard_rule", "vertical_binding", "policy_table", "model", "default", "human"] },
+    "rule_id": { "type": ["string", "null"] },
+    "confidence": { "type": ["number", "null"] },
+    "rationale": { "type": "string", "description": "One or two sentences. Long enough to argue with, short enough to read in a table." },
+    "inputs_hash": { "type": "string", "description": "Hash of the exact inputs, so an identical decision can be replayed and diffed after a policy change." },
+    "model": { "type": ["string", "null"] },
+    "cost_minor_units": { "type": ["number", "null"] },
+    "reversible": { "type": "boolean", "default": true },
+    "at": { "type": "string", "format": "date-time" }
+  }
+}

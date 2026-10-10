@@ -1,0 +1,26 @@
+{
+  "capability": {
+    "id": "intake.message.normalize",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Normalise Inbound Message",
+    "summary": "Any inbound shape (Telegram update, Slack event, email, web form, CRM webhook, schedule tick) collapses into one normalised message. This is the seam that makes the system omni-channel: a new intake channel is an adapter that produces this shape, and nothing downstream changes.",
+    "owner": "platform",
+    "maturity": "ga",
+    "capability_tags": ["intake.normalize"],
+    "side_effects": "none",
+    "idempotent": true,
+    "sla": { "p50_ms": 40, "p95_ms": 200, "timeout_ms": 5000 },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "detect", "kind": "code", "title": "Detect Source Shape", "group": "Normalise",
+        "with": { "code": "const p = $json.payload || {};\nconst src = p.source_channel || 'unknown';\nlet text = '', author = null, media = [], ref = null;\n\nswitch (src) {\n  case 'telegram': {\n    const m = p.raw?.message || {};\n    text = m.text || m.caption || '';\n    author = String(m.from?.id ?? '');\n    ref = String(m.message_id ?? '');\n    if (m.voice) media.push({ kind: 'audio', provider_file_id: m.voice.file_id, duration_s: m.voice.duration });\n    if (m.photo?.length) media.push({ kind: 'image', provider_file_id: m.photo[m.photo.length - 1].file_id });\n    if (m.document) media.push({ kind: 'doc', provider_file_id: m.document.file_id, mime: m.document.mime_type });\n    break;\n  }\n  case 'slack': { text = p.raw?.event?.text || ''; author = p.raw?.event?.user || null; ref = p.raw?.event?.ts || null; break; }\n  case 'email': { text = [p.raw?.subject, p.raw?.body].filter(Boolean).join('\\n\\n'); author = p.raw?.from || null; ref = p.raw?.message_id || null; break; }\n  case 'web_form': { text = Object.entries(p.raw || {}).map(([k, v]) => k + ': ' + v).join('\\n'); ref = p.raw?.submission_id || null; break; }\n  case 'crm_event': { text = p.raw?.description || JSON.stringify(p.raw || {}); ref = p.raw?.event_id || null; break; }\n  case 'schedule': { text = p.prompt || ''; ref = p.schedule_id || null; break; }\n  case 'api': { text = p.text || ''; ref = p.request_id || null; break; }\n  default: { text = typeof p.raw === 'string' ? p.raw : JSON.stringify(p.raw ?? p); }\n}\n\nreturn [{ json: {\n  source: { channel: src, author, raw_ref: ref, received_at: new Date().toISOString() },\n  text: String(text).trim(),\n  media,\n  modality: media.some(m => m.kind === 'audio') ? 'voice' : (media.length ? 'rich' : 'text'),\n  needs_transcription: media.some(m => m.kind === 'audio')\n} }];" } },
+      { "id": "redact", "kind": "code", "title": "Redact PII", "group": "Normalise",
+        "with": { "code": "// Runs before ANY text reaches a model. Redaction at the boundary is the only\n// placement that actually holds: once raw text is in a prompt it is in a log somewhere.\nif ($('Envelope In').first().json.policy?.pii_redaction === false) return [{ json: $json }];\nconst PATTERNS = [\n  [/[\\w.+-]+@[\\w-]+\\.[\\w.]+/g, '[email]'],\n  [/\\+?\\d[\\d\\s().-]{7,}\\d/g, '[phone]'],\n  [/\\b(?:\\d[ -]*?){13,16}\\b/g, '[card]'],\n  [/\\b\\d{3}-\\d{2}-\\d{4}\\b/g, '[ssn]']\n];\nlet text = $json.text || '';\nlet hits = 0;\nfor (const [re, tok] of PATTERNS) { text = text.replace(re, () => { hits++; return tok; }); }\nreturn [{ json: { ...$json, text, pii_redactions: hits } }];" } }
+    ]
+  }
+}

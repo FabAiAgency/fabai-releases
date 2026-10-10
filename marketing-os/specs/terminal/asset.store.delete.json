@@ -1,0 +1,74 @@
+{
+  "capability": {
+    "id": "asset.store.delete",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Delete Stored Asset",
+    "summary": "Compensation for asset.store.put. Removes the object and tombstones the DAM row rather than hard-deleting it — an orphaned row is recoverable, a lost audit trail is not.",
+    "owner": "platform",
+    "maturity": "ga",
+    "capability_tags": [
+      "compensate.asset.store"
+    ],
+    "side_effects": "external_write",
+    "idempotent": true,
+    "compensation": null,
+    "sla": {
+      "p50_ms": 800,
+      "p95_ms": 4000,
+      "timeout_ms": 30000
+    },
+    "retry": {
+      "max_attempts": 5,
+      "backoff": "exponential",
+      "base_ms": 2000
+    },
+    "requires": {
+      "secrets": [
+        "GOOGLE_DRIVE_OAUTH",
+        "MOS_STATE_URL"
+      ]
+    },
+    "verticals": "*",
+    "cost_model": {
+      "estimate_minor_units": 0
+    },
+    "observability": {
+      "slo": "99.9% — a compensation that fails leaves the system inconsistent, which is worse than the original failure"
+    }
+  },
+  "n8n": {
+    "trigger": {
+      "kind": "executeWorkflow"
+    },
+    "nodes": [
+      {
+        "id": "tombstone",
+        "kind": "http",
+        "title": "Tombstone DAM Row",
+        "group": "Compensate",
+        "with": {
+          "method": "PATCH",
+          "url": "={{ $env.MOS_STATE_URL }}/dam/assets/{{ $json.payload.asset_id }}",
+          "auth": "headerAuth",
+          "body": {
+            "status": "tombstoned",
+            "tombstoned_at": "={{ $now.toISO() }}",
+            "reason": "={{ $json.payload.reason || \"compensation\" }}"
+          }
+        }
+      },
+      {
+        "id": "remove",
+        "kind": "gdrive",
+        "title": "Remove Object",
+        "group": "Compensate",
+        "with": {
+          "operation": "delete",
+          "fileId": "={{ $json.payload.storage_uri }}"
+        },
+        "onError": "continue"
+      }
+    ]
+  }
+}

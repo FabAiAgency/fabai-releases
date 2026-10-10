@@ -1,0 +1,33 @@
+{
+  "capability": {
+    "id": "understand.intent.classify",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Classify Intent",
+    "summary": "Cheap, fast, structured classification of an inbound message. Deliberately a nano-tier call: this runs on every message, and paying frontier prices to decide 'is this a question or a campaign' is how an estate's model bill quietly triples.",
+    "owner": "intake",
+    "maturity": "ga",
+    "capability_tags": ["understand.classify"],
+    "side_effects": "none",
+    "idempotent": true,
+    "providers": [{ "name": "openai", "model": "gpt-4.1-nano", "tier": "nano", "cost_per_unit_minor": 0.2, "unit": "call" }],
+    "sla": { "p50_ms": 700, "p95_ms": 3000, "timeout_ms": 20000 },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0.2 }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "classify", "kind": "llm", "title": "Classify", "group": "Understand",
+        "with": { "role": "classify.intent",
+          "system": "Classify an inbound marketing request into one of the listed intents. You are a router. You do not answer, plan, or write anything.",
+          "prompt": "MESSAGE:\n{{ $json.payload.text }}\nSOURCE: {{ $json.payload.source_channel }}",
+          "structured": { "type": "object", "required": ["intent", "scope", "confidence"], "properties": {
+            "intent": { "type": "string", "enum": ["content.single", "campaign.launch", "asset.repurpose", "question", "edit_request", "approval_response", "status_check", "out_of_scope"] },
+            "scope": { "type": "string", "enum": ["one_asset", "one_channel", "multi_channel", "full_campaign", "none"] },
+            "urgency": { "type": "string", "enum": ["now", "scheduled", "whenever"] },
+            "confidence": { "type": "number" }
+          } } } }
+    ]
+  }
+}

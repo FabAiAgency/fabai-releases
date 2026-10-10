@@ -1,0 +1,828 @@
+{
+  "name": "[subsystem] Visual Factory",
+  "nodes": [
+    {
+      "id": "n_0024",
+      "name": "Frame · Envelope In",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        490,
+        170
+      ],
+      "parameters": {
+        "content": "## Envelope In",
+        "height": 330,
+        "width": 1040,
+        "color": 5
+      }
+    },
+    {
+      "id": "n_0025",
+      "name": "Frame · Reuse",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1510,
+        170
+      ],
+      "parameters": {
+        "content": "## Reuse",
+        "height": 330,
+        "width": 1040,
+        "color": 6
+      }
+    },
+    {
+      "id": "n_0026",
+      "name": "Frame · Generate##0",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2190,
+        170
+      ],
+      "parameters": {
+        "content": "## Generate",
+        "height": 530,
+        "width": 1040,
+        "color": 7
+      }
+    },
+    {
+      "id": "n_0027",
+      "name": "Frame · Generate##1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        890
+      ],
+      "parameters": {
+        "content": "## Generate",
+        "height": 330,
+        "width": 700,
+        "color": 2
+      }
+    },
+    {
+      "id": "n_0028",
+      "name": "Frame · Review##0",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2530,
+        370
+      ],
+      "parameters": {
+        "content": "## Review",
+        "height": 330,
+        "width": 700,
+        "color": 1
+      }
+    },
+    {
+      "id": "n_0029",
+      "name": "Frame · Review##1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        1090
+      ],
+      "parameters": {
+        "content": "## Review",
+        "height": 530,
+        "width": 360,
+        "color": 4
+      }
+    },
+    {
+      "id": "n_0030",
+      "name": "Frame · Telemetry Out",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        490,
+        890
+      ],
+      "parameters": {
+        "content": "## Telemetry Out",
+        "height": 530,
+        "width": 700,
+        "color": 5
+      }
+    },
+    {
+      "id": "n_0031",
+      "name": "Frame · Error & DLQ",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        1730
+      ],
+      "parameters": {
+        "content": "## Error & DLQ",
+        "height": 330,
+        "width": 1040,
+        "color": 3
+      }
+    },
+    {
+      "id": "n_0015",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "n_0016",
+      "name": "Envelope In",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED preamble — every unit in the estate starts here, identically.\n// Rejects an envelope whose MAJOR version this unit does not implement, rather than\n// half-processing a shape it does not understand.\nconst SUPPORTED_MAJOR = 1;\nconst raw = $json.envelope ?? $json;\nconst v = String(raw.envelope_version ?? '0.0.0');\nif (Number(v.split('.')[0]) !== SUPPORTED_MAJOR) {\n  throw new Error('VALIDATION_FAILED: envelope_version ' + v + ' is not supported by sub.visual@1.0.0 (needs ' + SUPPORTED_MAJOR + '.x)');\n}\nfor (const f of ['trace_id', 'tenant_id', 'idempotency_key']) {\n  if (!raw[f]) throw new Error('VALIDATION_FAILED: envelope.' + f + ' is required');\n}\nif (raw.deadline_at && Date.parse(raw.deadline_at) < Date.now()) {\n  // Fail fast rather than start work that cannot finish in time.\n  throw new Error('TIMEOUT: deadline_at ' + raw.deadline_at + ' already passed before sub.visual started');\n}\nreturn [{ json: {\n  ...raw,\n  span_id: 'spn_' + Math.random().toString(36).slice(2, 10),\n  parent_span_id: raw.span_id ?? null,\n  policy: raw.policy ?? {},\n  budget: raw.budget ?? {},\n  provenance: raw.provenance ?? [],\n  _started_at: Date.now(),\n  _capability: \"sub.visual\",\n  _capability_version: \"1.0.0\"\n} }];"
+      }
+    },
+    {
+      "id": "n_0017",
+      "name": "Span Start",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED telemetry — span_start.\nconst e = $json;\nreturn [{ json: { ...e, _telemetry: {\n  event_id: 'evt_' + Math.random().toString(36).slice(2, 12),\n  trace_id: e.trace_id, span_id: e.span_id, parent_span_id: e.parent_span_id,\n  tenant_id: e.tenant_id, brand_id: e.brand_id ?? null, vertical: e.vertical ?? null,\n  capability: \"sub.visual\", capability_version: \"1.0.0\",\n  layer: \"subsystem\", stage: e.stage ?? null,\n  event: 'span_start', at: new Date().toISOString()\n} } }];"
+      }
+    },
+    {
+      "id": "n_0018",
+      "name": "Budget Guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED budget guard — injected because sub.visual declares a cost\n// (estimate 16 minor units). A unit that can spend\n// money never gets to decide for itself whether it may.\nconst ESTIMATE = 16;\nconst e = $json;\nconst b = e.budget ?? {};\nconst cap_ = b.cap_minor_units ?? null;\nconst spent = b.spent_minor_units ?? 0;\nif (cap_ !== null && spent + ESTIMATE > cap_) {\n  throw new Error('BUDGET_EXCEEDED: ' + (spent + ESTIMATE) + ' would exceed cap ' + cap_ + ' in sub.visual');\n}\nlet tier = e.policy?.model_tier_cap ?? 'frontier';\nconst soft = b.soft_limit_pct ?? 0.8;\nif (cap_ !== null && spent + ESTIMATE > cap_ * soft) {\n  tier = { frontier: 'standard', standard: 'small', small: 'nano', nano: 'nano' }[tier] ?? 'small';\n}\nreturn [{ json: { ...e, policy: { ...(e.policy ?? {}), model_tier_cap: tier }, _budget_reserved: ESTIMATE } }];"
+      }
+    },
+    {
+      "id": "n_0001",
+      "name": "Search Library First",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1600,
+        300
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "media.image.search",
+          "mode": "id",
+          "cachedResultName": "media.image.search"
+        },
+        "mode": "once",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envelope": "={{ $json }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "n_0003",
+      "name": "Reuse?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1940,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c_0002",
+              "leftValue": "={{ $json.decision === 'reuse' && $('Envelope In').first().json.payload.brief.assets?.source_preference !== 'generate_only' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "n_0004",
+      "name": "Adapt Existing Asset",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2280,
+        300
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "media.image.edit",
+          "mode": "id",
+          "cachedResultName": "media.image.edit"
+        },
+        "mode": "once",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envelope": "={{ $json }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "n_0005",
+      "name": "Route Prompt Composer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2280,
+        500
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED by compiler/router.mjs — do not edit in the n8n canvas.\n// Resolves the abstract capability tag \"produce.image.prompt\" to a concrete implementation.\n// Precedence: hard_rule -> vertical_binding -> policy_table -> model -> default\nconst TAG = \"produce.image.prompt\";\nconst POLICY = {\n  \"precedence\": [\n    \"hard_rule\",\n    \"vertical_binding\",\n    \"policy_table\",\n    \"model\",\n    \"default\"\n  ],\n  \"hard_rules\": [\n    {\n      \"id\": \"HR-001-regulated-claim-requires-human\",\n      \"description\": \"Any claim tagged `regulated` (health outcome, financial return, legal result, efficacy) goes to a human before it can reach the public, regardless of tenant autonomy setting.\",\n      \"when\": {\n        \"brief.message.key_claims[].risk\": {\n          \"any_of\": [\n            \"regulated\"\n          ]\n        }\n      },\n      \"then\": {\n        \"action\": \"require_approval\",\n        \"reason_code\": \"REGULATED_CLAIM\",\n        \"message\": \"Regulated claim detected; human sign-off required before distribution.\"\n      },\n      \"severity\": \"block\"\n    },\n    {\n      \"id\": \"HR-002-paid-media-always-approved\",\n      \"description\": \"Paid channels spend money per impression. Never autonomous.\",\n      \"when\": {\n        \"context.channel_kind\": {\n          \"eq\": \"paid\"\n        }\n      },\n      \"then\": {\n        \"action\": \"require_approval\",\n        \"reason_code\": \"PAID_MEDIA\"\n      },\n      \"severity\": \"block\"\n    },\n    {\n      \"id\": \"HR-003-unknown-rights-cannot-publish\",\n      \"description\": \"An asset whose licence is unknown or expired is never distributed. This is the rule that keeps an autonomous system out of court.\",\n      \"when\": {\n        \"context.asset_rights\": {\n          \"in\": [\n            \"unknown\",\n            \"expired\"\n          ]\n        }\n      },\n      \"then\": {\n        \"action\": \"veto\",\n        \"reason_code\": \"RIGHTS_UNVERIFIED\",\n        \"message\": \"Asset rights unverified — blocked before distribution.\"\n      },\n      \"severity\": \"block\"\n    },\n    {\n      \"id\": \"HR-004-budget-exhausted\",\n      \"when\": {\n        \"envelope.budget.spent_minor_units\": {\n          \"gte\": \"@envelope.budget.cap_minor_units\"\n        }\n      },\n      \"then\": {\n        \"action\": \"veto\",\n        \"reason_code\": \"BUDGET_EXCEEDED\"\n      },\n      \"severity\": \"block\"\n    },\n    {\n      \"id\": \"HR-005-residency-pins-provider\",\n      \"description\": \"EU/UK residency forces in-region providers even when a cheaper chain exists.\",\n      \"when\": {\n        \"envelope.policy.data_residency\": {\n          \"in\": [\n            \"eu\",\n            \"uk\"\n          ]\n        }\n      },\n      \"then\": {\n        \"action\": \"force_provider\",\n        \"reason_code\": \"DATA_RESIDENCY\"\n      },\n      \"severity\": \"block\"\n    },\n    {\n      \"id\": \"HR-006-low-confidence-brief-asks\",\n      \"description\": \"The system asks rather than invents. A half-understood voice note becomes a question, not a campaign.\",\n      \"when\": {\n        \"brief.confidence\": {\n          \"lt\": 0.55\n        }\n      },\n      \"then\": {\n        \"action\": \"bind\",\n        \"capability\": \"intake.clarification.request\",\n        \"reason_code\": \"LOW_CONFIDENCE\"\n      },\n      \"severity\": \"block\"\n    },\n    {\n      \"id\": \"HR-007-first-run-for-tenant-is-drafted\",\n      \"description\": \"A brand-new tenant/brand never publishes autonomously on its first N runs, whatever its settings say. Trust is earned by observed output.\",\n      \"when\": {\n        \"context.tenant_run_count\": {\n          \"lt\": 5\n        }\n      },\n      \"then\": {\n        \"action\": \"downgrade_autonomy\",\n        \"reason_code\": \"TENANT_WARMUP\"\n      },\n      \"severity\": \"block\"\n    },\n    {\n      \"id\": \"HR-008-minor-or-health-audience\",\n      \"when\": {\n        \"brief.audience.description\": {\n          \"matches\": \"(?i)(child|minor|under 18|patient|diagnos)\"\n        }\n      },\n      \"then\": {\n        \"action\": \"require_approval\",\n        \"reason_code\": \"SENSITIVE_AUDIENCE\"\n      },\n      \"severity\": \"block\"\n    }\n  ],\n  \"policy_table\": [\n    {\n      \"tag\": \"produce.image.prompt\",\n      \"when\": {\n        \"brief.offer.type\": {\n          \"in\": [\n            \"product_physical\"\n          ]\n        }\n      },\n      \"bind\": \"prompt.image.compose.product_studio\",\n      \"note\": \"Physical goods lead with the product rendered cleanly; lifestyle comes second.\"\n    },\n    {\n      \"tag\": \"produce.image.prompt\",\n      \"when\": {\n        \"brief.offer.type\": {\n          \"in\": [\n            \"service\"\n          ]\n        }\n      },\n      \"bind\": \"prompt.image.compose.field_proof\",\n      \"note\": \"Services have no product shot. Proof of work, people and place carry the image.\"\n    },\n    {\n      \"tag\": \"produce.image.prompt\",\n      \"when\": {\n        \"brief.offer.type\": {\n          \"in\": [\n            \"product_digital\",\n            \"subscription\"\n          ]\n        }\n      },\n      \"bind\": \"prompt.image.compose.ui_abstract\"\n    }\n  ],\n  \"defaults\": {\n    \"intake.normalize\": \"intake.message.normalize\",\n    \"intake.transcribe\": \"intake.audio.transcribe\",\n    \"understand.classify\": \"understand.intent.classify\",\n    \"plan.brief\": \"plan.brief.synthesize\",\n    \"plan.campaign\": \"plan.campaign.compose\",\n    \"research.market\": \"research.web.search\",\n    \"research.product\": \"research.product.fetch\",\n    \"produce.copy.longform\": \"copy.longform.generate\",\n    \"produce.copy.short\": \"copy.short.generate\",\n    \"produce.script\": \"copy.script.generate\",\n    \"produce.localize\": \"copy.localize\",\n    \"produce.image.prompt\": \"prompt.image.compose\",\n    \"produce.image\": \"media.image.generate\",\n    \"produce.image.edit\": \"media.image.edit\",\n    \"produce.video.clip\": \"media.video.clip.generate\",\n    \"produce.audio.vo\": \"media.audio.vo.generate\",\n    \"produce.captions\": \"media.captions.generate\",\n    \"assemble.video\": \"media.video.render\",\n    \"asset.search\": \"media.image.search\",\n    \"asset.store\": \"asset.store.put\",\n    \"asset.log\": \"asset.ledger.append\",\n    \"verify.brand\": \"verify.brand.score\",\n    \"verify.compliance\": \"verify.compliance.screen\",\n    \"verify.rights\": \"verify.rights.check\",\n    \"approve.human\": \"approve.human.request\",\n    \"distribute.publish\": \"dist.publish.telegram\",\n    \"distribute.schedule\": \"dist.schedule.enqueue\",\n    \"measure.collect\": \"measure.metrics.collect\",\n    \"measure.score\": \"measure.creative.score\",\n    \"learn.update\": \"learn.playbook.update\",\n    \"ops.budget\": \"ops.budget.check\",\n    \"ops.clarify\": \"intake.clarification.request\"\n  },\n  \"gray_zone\": {\n    \"enabled\": true,\n    \"decisions\": [\n      \"play_selection\",\n      \"angle_selection\",\n      \"channel_mix\",\n      \"asset_reuse_vs_generate\",\n      \"variant_winner\",\n      \"clarification\"\n    ],\n    \"model_role\": \"reasoning.router\",\n    \"model_tier\": \"small\",\n    \"confidence_floor\": 0.6,\n    \"on_low_confidence\": \"ask_human\",\n    \"max_options\": 5,\n    \"contract\": \"The router is handed an ENUMERATED option list already filtered by hard rules and policy table, plus the brief and the vertical profile. It returns {chosen, confidence, rationale}. It cannot invent an option, cannot call a capability, and cannot see anything a hard rule removed.\"\n  }\n};\nconst VERTICAL_BINDINGS = {\n  \"generic\": {},\n  \"b2b_saas\": {\n    \"produce.image.prompt\": \"prompt.image.compose.ui_abstract\",\n    \"assemble.video\": \"media.video.render.explainer_wide\"\n  },\n  \"b2b_industrial\": {\n    \"produce.image.prompt\": \"prompt.image.compose.field_proof\",\n    \"assemble.video\": \"media.video.render.explainer_wide\"\n  },\n  \"ecommerce_dtc\": {\n    \"produce.image.prompt\": \"prompt.image.compose.product_studio\",\n    \"assemble.video\": \"media.video.render.ugc_vertical\",\n    \"research.product\": \"research.product.catalog\"\n  },\n  \"health_wellness\": {\n    \"verify.compliance\": \"verify.compliance.screen.strict\"\n  },\n  \"home_goods\": {\n    \"produce.image.prompt\": \"prompt.image.compose.lifestyle_room\",\n    \"assemble.video\": \"media.video.render.explainer_wide\",\n    \"research.product\": \"research.product.catalog\"\n  },\n  \"local_services\": {\n    \"produce.image.prompt\": \"prompt.image.compose.field_proof\",\n    \"assemble.video\": \"media.video.render.before_after\",\n    \"distribute.publish\": \"dist.publish.gbp\"\n  },\n  \"professional_services\": {\n    \"produce.image.prompt\": \"prompt.image.compose.ui_abstract\"\n  }\n};\n\nconst env = $('Envelope In').first().json;\nconst brief = env.payload?.brief ?? $json.brief ?? {};\nconst context = { ...(env.payload?.context ?? {}), ...($json.context ?? {}), ...$json };\n\nfunction readPath(path) {\n  // Supports \"a.b.c\" and \"a.b[].c\" (the latter collects across an array).\n  const parts = path.split('.');\n  let scope = parts.shift();\n  let cur = scope === 'envelope' ? env : scope === 'brief' ? brief : scope === 'context' ? context : undefined;\n  for (const raw of parts) {\n    if (cur == null) return undefined;\n    if (raw.endsWith('[]')) {\n      const key = raw.slice(0, -2);\n      const arr = cur[key];\n      if (!Array.isArray(arr)) return undefined;\n      cur = arr;\n      continue;\n    }\n    cur = Array.isArray(cur) ? cur.map(x => x?.[raw]).filter(v => v !== undefined) : cur[raw];\n  }\n  return cur;\n}\n\nfunction resolveRef(v) {\n  return (typeof v === 'string' && v.startsWith('@')) ? readPath(v.slice(1)) : v;\n}\n\n// Policy authors write PCRE-style inline flags ((?i)...) which JS RegExp rejects outright.\n// Translating them here rather than forbidding them keeps the rule files readable; the\n// validator compiles every pattern at build time so a genuinely broken one fails the build\n// instead of silently never matching a compliance rule.\nfunction toRegExp(pattern) {\n  const m = /^\\(\\?([imsux]+)\\)/.exec(pattern);\n  if (!m) return new RegExp(pattern);\n  const flags = m[1].replace(/[xu]/g, '');\n  return new RegExp(pattern.slice(m[0].length), flags);\n}\n\nfunction test(actual, op, expected) {\n  const exp = resolveRef(expected);\n  switch (op) {\n    case 'eq': return actual === exp;\n    case 'neq': return actual !== exp;\n    case 'in': return Array.isArray(exp) && exp.includes(actual);\n    case 'nin': return Array.isArray(exp) && !exp.includes(actual);\n    case 'gt': return Number(actual) > Number(exp);\n    case 'gte': return Number(actual) >= Number(exp);\n    case 'lt': return Number(actual) < Number(exp);\n    case 'lte': return Number(actual) <= Number(exp);\n    case 'exists': return (actual !== undefined && actual !== null) === Boolean(exp);\n    case 'matches': return toRegExp(exp).test(String(actual ?? ''));\n    case 'any_of': {\n      const arr = Array.isArray(actual) ? actual : [actual];\n      return Array.isArray(exp) && arr.some(a => exp.includes(a));\n    }\n    default: return false;\n  }\n}\n\nfunction matches(when) {\n  if (!when || Object.keys(when).length === 0) return true;\n  return Object.entries(when).every(([path, cond]) =>\n    Object.entries(cond).every(([op, expected]) => test(readPath(path), op, expected))\n  );\n}\n\nconst decision = {\n  decision_id: 'dec_' + (env.trace_id ?? 'x').slice(4, 16) + '_' + TAG.replace(/\\./g, '_'),\n  trace_id: env.trace_id,\n  tenant_id: env.tenant_id,\n  vertical: env.vertical ?? 'generic',\n  kind: 'capability_binding',\n  question: 'Which implementation satisfies ' + TAG + '?',\n  options: [],\n  at: new Date().toISOString()\n};\n\nlet resolved = null, by = null, ruleId = null, vetoed = null;\nconst constraints = [];\n\nfor (const layer of POLICY.precedence) {\n  if (resolved || vetoed) break;\n\n  if (layer === 'hard_rule') {\n    for (const rule of POLICY.hard_rules) {\n      if (!matches(rule.when)) continue;\n      decision.options.push({ value: rule.id, eliminated_by: null });\n      const act = rule.then.action;\n      if (act === 'veto') { vetoed = rule; break; }\n      if (act === 'bind') { resolved = rule.then.capability; by = 'hard_rule'; ruleId = rule.id; break; }\n      // require_approval / downgrade_autonomy / force_provider / add_step do not BIND —\n      // they constrain the run and are carried forward for the orchestrator to honour.\n      constraints.push({ rule_id: rule.id, action: act, reason_code: rule.then.reason_code, message: rule.then.message ?? null });\n    }\n  }\n\n  if (layer === 'vertical_binding' && !resolved) {\n    const bound = VERTICAL_BINDINGS[env.vertical ?? 'generic']?.[TAG];\n    if (bound) { resolved = bound; by = 'vertical_binding'; ruleId = (env.vertical ?? 'generic') + ':' + TAG; }\n  }\n\n  if (layer === 'policy_table' && !resolved) {\n    for (const row of POLICY.policy_table) {\n      if (!matches(row.when)) { decision.options.push({ value: row.bind, eliminated_by: 'policy_table_condition' }); continue; }\n      resolved = row.bind; by = 'policy_table'; ruleId = row.note ?? null; break;\n    }\n  }\n\n  if (layer === 'default' && !resolved) {\n    const d = POLICY.defaults[TAG];\n    if (d) { resolved = d; by = 'default'; }\n  }\n}\n\nif (vetoed) {\n  return [{ json: {\n    resolved_capability: null,\n    vetoed: true,\n    decision: { ...decision, chosen: 'VETO:' + vetoed.id, decided_by: 'hard_rule', rule_id: vetoed.id, rationale: vetoed.then.message ?? vetoed.description ?? 'Blocked by a hard rule.' },\n    error: { code: vetoed.then.reason_code === 'BUDGET_EXCEEDED' ? 'BUDGET_EXCEEDED' : 'POLICY_BLOCKED', message: vetoed.then.message ?? vetoed.id, retryable: false, at: new Date().toISOString() }\n  } }];\n}\n\nif (!resolved) {\n  throw new Error('INTERNAL: no implementation resolved for tag ' + TAG + ' and no default is declared. This is a build-time error that escaped the validator.');\n}\n\nreturn [{ json: {\n  ...$json,\n  resolved_capability: resolved,\n  routing: { requested_capability: TAG, resolved_capability: resolved, implementation: resolved, binding_source: by, decision_id: decision.decision_id },\n  constraints,\n  decision: { ...decision, chosen: resolved, decided_by: by, rule_id: ruleId, rationale: 'Bound by ' + by + (ruleId ? ' (' + ruleId + ')' : '') + '.' }\n} }];\n"
+      }
+    },
+    {
+      "id": "n_0006",
+      "name": "Route Prompt Composer · Record Decision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2620,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_STATE_URL }}/decisions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.decision) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0007",
+      "name": "Compose Prompts",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2960,
+        300
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "={{ $json.resolved_capability }}",
+          "mode": "id",
+          "cachedResultName": "={{ $json.resolved_capability }}"
+        },
+        "mode": "once",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envelope": "={{ $json }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "n_0008",
+      "name": "Per Prompt",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        240,
+        1020
+      ],
+      "parameters": {
+        "fieldToSplitOut": "prompts",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_0009",
+      "name": "Generate Image",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        580,
+        1020
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "media.image.generate",
+          "mode": "id",
+          "cachedResultName": "media.image.generate"
+        },
+        "mode": "each",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envelope": "={{ $json }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "n_0010",
+      "name": "Brand Score",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2620,
+        500
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "verify.brand.score",
+          "mode": "id",
+          "cachedResultName": "verify.brand.score"
+        },
+        "mode": "once",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envelope": "={{ $json }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "n_0012",
+      "name": "On Brand?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2960,
+        500
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c_0011",
+              "leftValue": "={{ $json.status !== 'fail' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "n_0013",
+      "name": "One Corrective Pass",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        1220
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Exactly one corrective regeneration, with the violations fed back into the prompt.\n// Unbounded retry loops against a subjective scorer are how a system burns a budget overnight.\nconst attempt = $('Envelope In').first().json.payload._brand_attempt || 0;\nif (attempt >= 1) {\n  return [{ json: { give_up: true, status: 'warn', reason: 'brand_floor_not_met_after_one_correction', escalate_to_human: true } }];\n}\nconst v = ($json.violations || []).map(x => `${x.rule}: ${x.fix}`).join('; ');\nreturn [{ json: { _brand_attempt: attempt + 1, prompt_suffix: `\\n\\nBrand corrections required: ${v}` } }];"
+      }
+    },
+    {
+      "id": "n_0014",
+      "name": "Collect Assets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        1420
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all().map(i => i.json);\nreturn [{ json: {\n  assets: items.filter(a => a.asset_id),\n  usable: items.filter(a => a.asset_id && a.status !== 'fail').length,\n  escalations: items.filter(a => a.escalate_to_human),\n  reused: items.filter(a => a.deduped || a.reused).length\n} }];"
+      }
+    },
+    {
+      "id": "n_0019",
+      "name": "Provenance & Span End",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        1220
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED epilogue — appends exactly one provenance entry and closes the span.\n// Provenance is append-only; nothing in the estate is permitted to rewrite an earlier entry.\nconst e = $('Envelope In').first().json;\nconst out = $json;\nconst duration = Date.now() - (e._started_at ?? Date.now());\nconst entry = {\n  capability: \"sub.visual\",\n  version: \"1.0.0\",\n  at: new Date().toISOString(),\n  duration_ms: duration,\n  model: out._model ?? null,\n  provider: out._provider ?? null,\n  cost_minor_units: out._cost_minor_units ?? 16,\n  inputs_hash: e.idempotency_key,\n  decision_id: out.decision?.decision_id ?? null\n};\nreturn [{ json: {\n  ...out,\n  _envelope: {\n    ...e,\n    span_id: e.parent_span_id,\n    provenance: [...(e.provenance ?? []), entry],\n    budget: { ...(e.budget ?? {}), spent_minor_units: (e.budget?.spent_minor_units ?? 0) + (entry.cost_minor_units ?? 0) }\n  },\n  _telemetry: {\n    event_id: 'evt_' + Math.random().toString(36).slice(2, 12),\n    trace_id: e.trace_id, span_id: e.span_id, tenant_id: e.tenant_id,\n    capability: \"sub.visual\", capability_version: \"1.0.0\",\n    layer: \"subsystem\", event: 'span_end', status: out.error ? 'error' : 'ok',\n    duration_ms: duration, cost_minor_units: entry.cost_minor_units,\n    error_code: out.error?.code ?? null, at: new Date().toISOString()\n  }\n} }];"
+      }
+    },
+    {
+      "id": "n_0020",
+      "name": "Emit Telemetry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        1020
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_TELEMETRY_URL }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._telemetry) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0021",
+      "name": "On Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        1860
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "n_0022",
+      "name": "Park to DLQ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        580,
+        1860
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_STATE_URL }}/dlq",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  capability: \"sub.visual\",\n  capability_version: \"1.0.0\",\n  trace_id: $json.execution?.id,\n  error: { message: $json.execution?.error?.message, node: $json.execution?.lastNodeExecuted, stack: $json.execution?.error?.stack },\n  envelope: $json.execution?.data,\n  replayable: true,\n  at: new Date().toISOString()\n}) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0023",
+      "name": "Notify Ops",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        920,
+        1860
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $env.MOS_OPS_CHAT_ID }}",
+        "text": "=Run failed in sub.visual\n{{ $json.execution?.error?.message }}\nNode: {{ $json.execution?.lastNodeExecuted }}\nReplay: mos replay {{ $json.execution?.id }}",
+        "additionalFields": {}
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Route Prompt Composer": {
+      "main": [
+        [
+          {
+            "node": "Route Prompt Composer · Record Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Library First": {
+      "main": [
+        [
+          {
+            "node": "Reuse?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reuse?": {
+      "main": [
+        [
+          {
+            "node": "Adapt Existing Asset",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route Prompt Composer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adapt Existing Asset": {
+      "main": [
+        [
+          {
+            "node": "Brand Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Prompt Composer · Record Decision": {
+      "main": [
+        [
+          {
+            "node": "Compose Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose Prompts": {
+      "main": [
+        [
+          {
+            "node": "Per Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Per Prompt": {
+      "main": [
+        [
+          {
+            "node": "Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Image": {
+      "main": [
+        [
+          {
+            "node": "Brand Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brand Score": {
+      "main": [
+        [
+          {
+            "node": "On Brand?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Brand?": {
+      "main": [
+        [
+          {
+            "node": "Collect Assets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "One Corrective Pass",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One Corrective Pass": {
+      "main": [
+        [
+          {
+            "node": "Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Envelope In",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envelope In": {
+      "main": [
+        [
+          {
+            "node": "Span Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Span Start": {
+      "main": [
+        [
+          {
+            "node": "Budget Guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Budget Guard": {
+      "main": [
+        [
+          {
+            "node": "Search Library First",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provenance & Span End": {
+      "main": [
+        [
+          {
+            "node": "Emit Telemetry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Assets": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Error": {
+      "main": [
+        [
+          {
+            "node": "Park to DLQ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Park to DLQ": {
+      "main": [
+        [
+          {
+            "node": "Notify Ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "errorWorkflow": "",
+    "timezone": "UTC",
+    "executionTimeout": 300
+  },
+  "tags": [
+    {
+      "name": "mos:subsystem"
+    },
+    {
+      "name": "mos:ga"
+    },
+    {
+      "name": "tag:subsystem.visual"
+    }
+  ],
+  "meta": {
+    "mos": {
+      "capability_id": "sub.visual",
+      "version": "1.0.0",
+      "layer": "subsystem",
+      "owner": "visual",
+      "side_effects": "spend",
+      "idempotent": true,
+      "compensation": "asset.store.delete",
+      "verticals": "*",
+      "compiled_at": null,
+      "compiled_from": "specs/subsystems/sub.visual.json",
+      "extends": null,
+      "generated": "Compiled by marketing-os/compiler. Edit the spec, not this file — canvas edits are overwritten on the next build."
+    }
+  },
+  "pinData": {}
+}

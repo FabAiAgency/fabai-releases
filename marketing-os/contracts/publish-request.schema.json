@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fabai.dev/mos/contracts/publish-request.schema.json",
+  "title": "Publish Request",
+  "description": "The channel-neutral instruction handed to a distribution adapter. Adding a channel means writing one adapter that consumes this — never touching the factories that produced the creative.",
+  "type": "object",
+  "required": ["request_id", "tenant_id", "channel", "content"],
+  "properties": {
+    "request_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "brand_id": { "type": ["string", "null"] },
+    "trace_id": { "type": "string" },
+    "channel": { "type": "string", "description": "Id from registry/channels.json." },
+    "account_ref": { "type": ["string", "null"], "description": "Which connected account/page/property. Resolved from tenant config, never hard-coded in a workflow." },
+    "format": { "type": "string" },
+    "content": {
+      "type": "object",
+      "properties": {
+        "title": { "type": ["string", "null"] },
+        "body": { "type": ["string", "null"] },
+        "caption": { "type": ["string", "null"] },
+        "hashtags": { "type": "array", "items": { "type": "string" } },
+        "link": { "type": ["string", "null"] },
+        "cta": { "type": ["object", "null"] },
+        "asset_ids": { "type": "array", "items": { "type": "string" } },
+        "thread": { "type": "array", "items": { "type": "string" }, "description": "For channels that support multi-part posts." }
+      }
+    },
+    "schedule": { "type": "object", "properties": { "mode": { "type": "string", "enum": ["now", "at", "optimal_window", "queue"] }, "at": { "type": ["string", "null"], "format": "date-time" }, "timezone": { "type": "string", "default": "UTC" } } },
+    "gates": {
+      "type": "object",
+      "description": "Snapshot of the checks that must be green. An adapter re-verifies these itself rather than trusting the caller — defence in depth on the only step that is visible to the public.",
+      "properties": {
+        "brand": { "type": "string", "enum": ["pass", "warn", "fail", "skipped"] },
+        "compliance": { "type": "string", "enum": ["pass", "warn", "fail", "skipped"] },
+        "rights": { "type": "string", "enum": ["pass", "fail", "skipped"] },
+        "human_approval": { "type": "string", "enum": ["approved", "not_required", "pending", "rejected"] }
+      }
+    },
+    "idempotency_key": { "type": "string" },
+    "dry_run": { "type": "boolean", "default": false, "description": "Adapters MUST honour this: full validation, zero external effect. This is how the estate is smoke-tested in production without posting." }
+  }
+}

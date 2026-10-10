@@ -1,0 +1,26 @@
+{
+  "extends": "media.video.render",
+  "capability": {
+    "id": "media.video.render.before_after",
+    "version": "1.0.0",
+    "title": "Render Video — Before / After Proof",
+    "summary": "Bound by local services. A wipe between two frames shot from the same position, with a locked evidence guarantee: the renderer refuses a pair whose frames were not flagged as real captures.",
+    "capability_tags": ["assemble.video"],
+    "verticals": ["local_services", "health_wellness"],
+    "side_effects": "spend",
+    "idempotent": true,
+    "compensation": "asset.store.delete"
+  },
+  "overrides": {
+    "timeline": {
+      "template": {
+        "aspect_ratio": "9:16",
+        "transitions": "linear_wipe_600ms",
+        "caption_style": { "font_family": "Inter", "font_weight": "700", "font_size": "5.5vh", "fill_color": "#FFFFFF", "stroke_color": "#000000", "y": "78%" },
+        "labels": ["Before", "After"],
+        "end_card": "brand_service_area_card"
+      },
+      "code_prepend": "// Evidence guard. A generated 'after' frame in a proof cut is fabricated evidence — a\n// compliance failure in services and health, not a stylistic choice. The pair must be\n// marked as real captures upstream or this render refuses to run.\nconst pair = $json.payload.evidence_pair;\nif (!pair || pair.generated === true) {\n  throw new Error('COMPLIANCE_BLOCKED: before/after proof requires captured (not generated) frames');\n}\n"
+    }
+  }
+}

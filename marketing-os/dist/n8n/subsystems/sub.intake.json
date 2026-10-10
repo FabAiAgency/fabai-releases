@@ -1,0 +1,1174 @@
+{
+  "name": "[subsystem] Intake & Understanding",
+  "nodes": [
+    {
+      "id": "n_0039",
+      "name": "Frame · Envelope In",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        490,
+        170
+      ],
+      "parameters": {
+        "content": "## Envelope In",
+        "height": 330,
+        "width": 1040,
+        "color": 5
+      }
+    },
+    {
+      "id": "n_0040",
+      "name": "Frame · Intake",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1510,
+        170
+      ],
+      "parameters": {
+        "content": "## Intake",
+        "height": 330,
+        "width": 1040,
+        "color": 6
+      }
+    },
+    {
+      "id": "n_0041",
+      "name": "Frame · Understand##0",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2085,
+        170
+      ],
+      "parameters": {
+        "content": "## Understand",
+        "height": 1180,
+        "width": 1145,
+        "color": 7
+      }
+    },
+    {
+      "id": "n_0042",
+      "name": "Frame · Understand##1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2870,
+        370
+      ],
+      "parameters": {
+        "content": "## Understand",
+        "height": 330,
+        "width": 360,
+        "color": 2
+      }
+    },
+    {
+      "id": "n_0043",
+      "name": "Frame · Understand##2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2870,
+        970
+      ],
+      "parameters": {
+        "content": "## Understand",
+        "height": 330,
+        "width": 360,
+        "color": 1
+      }
+    },
+    {
+      "id": "n_0044",
+      "name": "Frame · Brief##0",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2870,
+        170
+      ],
+      "parameters": {
+        "content": "## Brief",
+        "height": 330,
+        "width": 360,
+        "color": 4
+      }
+    },
+    {
+      "id": "n_0045",
+      "name": "Frame · Brief##1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        1490
+      ],
+      "parameters": {
+        "content": "## Brief",
+        "height": 330,
+        "width": 700,
+        "color": 5
+      }
+    },
+    {
+      "id": "n_0046",
+      "name": "Frame · Telemetry Out",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        1690
+      ],
+      "parameters": {
+        "content": "## Telemetry Out",
+        "height": 330,
+        "width": 700,
+        "color": 6
+      }
+    },
+    {
+      "id": "n_0047",
+      "name": "Frame · Error & DLQ",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        2130
+      ],
+      "parameters": {
+        "content": "## Error & DLQ",
+        "height": 330,
+        "width": 1040,
+        "color": 3
+      }
+    },
+    {
+      "id": "n_0030",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "n_0031",
+      "name": "Envelope In",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED preamble — every unit in the estate starts here, identically.\n// Rejects an envelope whose MAJOR version this unit does not implement, rather than\n// half-processing a shape it does not understand.\nconst SUPPORTED_MAJOR = 1;\nconst raw = $json.envelope ?? $json;\nconst v = String(raw.envelope_version ?? '0.0.0');\nif (Number(v.split('.')[0]) !== SUPPORTED_MAJOR) {\n  throw new Error('VALIDATION_FAILED: envelope_version ' + v + ' is not supported by sub.intake@1.0.0 (needs ' + SUPPORTED_MAJOR + '.x)');\n}\nfor (const f of ['trace_id', 'tenant_id', 'idempotency_key']) {\n  if (!raw[f]) throw new Error('VALIDATION_FAILED: envelope.' + f + ' is required');\n}\nif (raw.deadline_at && Date.parse(raw.deadline_at) < Date.now()) {\n  // Fail fast rather than start work that cannot finish in time.\n  throw new Error('TIMEOUT: deadline_at ' + raw.deadline_at + ' already passed before sub.intake started');\n}\nreturn [{ json: {\n  ...raw,\n  span_id: 'spn_' + Math.random().toString(36).slice(2, 10),\n  parent_span_id: raw.span_id ?? null,\n  policy: raw.policy ?? {},\n  budget: raw.budget ?? {},\n  provenance: raw.provenance ?? [],\n  _started_at: Date.now(),\n  _capability: \"sub.intake\",\n  _capability_version: \"1.0.0\"\n} }];"
+      }
+    },
+    {
+      "id": "n_0032",
+      "name": "Span Start",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED telemetry — span_start.\nconst e = $json;\nreturn [{ json: { ...e, _telemetry: {\n  event_id: 'evt_' + Math.random().toString(36).slice(2, 12),\n  trace_id: e.trace_id, span_id: e.span_id, parent_span_id: e.parent_span_id,\n  tenant_id: e.tenant_id, brand_id: e.brand_id ?? null, vertical: e.vertical ?? null,\n  capability: \"sub.intake\", capability_version: \"1.0.0\",\n  layer: \"subsystem\", stage: e.stage ?? null,\n  event: 'span_start', at: new Date().toISOString()\n} } }];"
+      }
+    },
+    {
+      "id": "n_0033",
+      "name": "Budget Guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED budget guard — injected because sub.intake declares a cost\n// (estimate 6 minor units). A unit that can spend\n// money never gets to decide for itself whether it may.\nconst ESTIMATE = 6;\nconst e = $json;\nconst b = e.budget ?? {};\nconst cap_ = b.cap_minor_units ?? null;\nconst spent = b.spent_minor_units ?? 0;\nif (cap_ !== null && spent + ESTIMATE > cap_) {\n  throw new Error('BUDGET_EXCEEDED: ' + (spent + ESTIMATE) + ' would exceed cap ' + cap_ + ' in sub.intake');\n}\nlet tier = e.policy?.model_tier_cap ?? 'frontier';\nconst soft = b.soft_limit_pct ?? 0.8;\nif (cap_ !== null && spent + ESTIMATE > cap_ * soft) {\n  tier = { frontier: 'standard', standard: 'small', small: 'nano', nano: 'nano' }[tier] ?? 'small';\n}\nreturn [{ json: { ...e, policy: { ...(e.policy ?? {}), model_tier_cap: tier }, _budget_reserved: ESTIMATE } }];"
+      }
+    },
+    {
+      "id": "n_0001",
+      "name": "Normalise Message",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1600,
+        300
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "intake.message.normalize",
+          "mode": "id",
+          "cachedResultName": "intake.message.normalize"
+        },
+        "mode": "once",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envelope": "={{ $json }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "n_0003",
+      "name": "Needs Transcription?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1940,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c_0002",
+              "leftValue": "={{ $json.needs_transcription === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "n_0004",
+      "name": "Transcribe Voice",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2280,
+        300
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "intake.audio.transcribe",
+          "mode": "id",
+          "cachedResultName": "intake.audio.transcribe"
+        },
+        "mode": "once",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envelope": "={{ $json }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "n_0005",
+      "name": "Classify Intent",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        2280,
+        500
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "MESSAGE:\n{{ $json.text }}\n\nSOURCE: {{ $json.source.channel }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Classify an inbound marketing request. You are a router, not a strategist — you decide what KIND of thing this is so the right subsystem picks it up. You never decide what the campaign should say."
+            }
+          ]
+        },
+        "hasOutputParser": true
+      }
+    },
+    {
+      "id": "n_0006",
+      "name": "Classify Intent · Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.1,
+      "position": [
+        2175,
+        750
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-nano",
+          "mode": "list"
+        },
+        "options": {
+          "temperature": 0,
+          "maxTokens": 500
+        }
+      }
+    },
+    {
+      "id": "n_0007",
+      "name": "Classify Intent · Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        2385,
+        750
+      ],
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"required\": [\n    \"intent\",\n    \"scope\"\n  ],\n  \"properties\": {\n    \"intent\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"content.single\",\n        \"campaign.launch\",\n        \"asset.repurpose\",\n        \"question\",\n        \"edit_request\",\n        \"approval_response\",\n        \"status_check\",\n        \"out_of_scope\"\n      ]\n    },\n    \"scope\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"one_asset\",\n        \"one_channel\",\n        \"multi_channel\",\n        \"full_campaign\",\n        \"none\"\n      ]\n    },\n    \"urgency\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"now\",\n        \"scheduled\",\n        \"whenever\"\n      ]\n    },\n    \"references_prior_run\": {\n      \"type\": \"boolean\"\n    },\n    \"confidence\": {\n      \"type\": \"number\"\n    }\n  }\n}"
+      }
+    },
+    {
+      "id": "n_0016",
+      "name": "Route by Intent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2620,
+        300
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c_0008",
+                    "leftValue": "={{ ($json.output || $json).intent }}",
+                    "rightValue": "content.single",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "outputKey": "content.single"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c_0009",
+                    "leftValue": "={{ ($json.output || $json).intent }}",
+                    "rightValue": "campaign.launch",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "outputKey": "campaign.launch"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c_0010",
+                    "leftValue": "={{ ($json.output || $json).intent }}",
+                    "rightValue": "asset.repurpose",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "outputKey": "asset.repurpose"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c_0011",
+                    "leftValue": "={{ ($json.output || $json).intent }}",
+                    "rightValue": "question",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "outputKey": "question"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c_0012",
+                    "leftValue": "={{ ($json.output || $json).intent }}",
+                    "rightValue": "edit_request",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "outputKey": "edit_request"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c_0013",
+                    "leftValue": "={{ ($json.output || $json).intent }}",
+                    "rightValue": "approval_response",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "outputKey": "approval_response"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c_0014",
+                    "leftValue": "={{ ($json.output || $json).intent }}",
+                    "rightValue": "status_check",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "outputKey": "status_check"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c_0015",
+                    "leftValue": "={{ ($json.output || $json).intent }}",
+                    "rightValue": "out_of_scope",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "outputKey": "out_of_scope"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "content.single"
+        }
+      }
+    },
+    {
+      "id": "n_0017",
+      "name": "Synthesise Brief",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2960,
+        300
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "plan.brief.synthesize",
+          "mode": "id",
+          "cachedResultName": "plan.brief.synthesize"
+        },
+        "mode": "once",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envelope": "={{ $json }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "n_0019",
+      "name": "Brief Usable?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        1620
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c_0018",
+              "leftValue": "={{ $json.confidence >= 0.55 && $json._validation?.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "n_0020",
+      "name": "Ask a Question",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        580,
+        1620
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "intake.clarification.request",
+          "mode": "id",
+          "cachedResultName": "intake.clarification.request"
+        },
+        "mode": "once",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "envelope": "={{ $json }}"
+          }
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      }
+    },
+    {
+      "id": "n_0023",
+      "name": "Route to Q&A",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2960,
+        500
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a_0021",
+              "name": "handoff",
+              "value": "sys.assistant.answer",
+              "type": "string"
+            },
+            {
+              "id": "a_0022",
+              "name": "note",
+              "value": "A question is not a campaign. Handing it to an answering path keeps the production pipeline from manufacturing content nobody asked for.",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n_0025",
+      "name": "Forward to Approval",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2960,
+        700
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a_0024",
+              "name": "handoff",
+              "value": "approve.human.resolve",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n_0026",
+      "name": "Run Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2960,
+        900
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.MOS_STATE_URL }}/runs/recent?tenant_id={{ $('Envelope In').first().json.tenant_id }}&limit=5",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "n_0029",
+      "name": "Out of Scope",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2960,
+        1100
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a_0027",
+              "name": "handoff",
+              "value": "none",
+              "type": "string"
+            },
+            {
+              "id": "a_0028",
+              "name": "reply",
+              "value": "That's outside what I handle. I work on marketing content and campaigns.",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n_0034",
+      "name": "Provenance & Span End",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        1820
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED epilogue — appends exactly one provenance entry and closes the span.\n// Provenance is append-only; nothing in the estate is permitted to rewrite an earlier entry.\nconst e = $('Envelope In').first().json;\nconst out = $json;\nconst duration = Date.now() - (e._started_at ?? Date.now());\nconst entry = {\n  capability: \"sub.intake\",\n  version: \"1.0.0\",\n  at: new Date().toISOString(),\n  duration_ms: duration,\n  model: out._model ?? null,\n  provider: out._provider ?? null,\n  cost_minor_units: out._cost_minor_units ?? 6,\n  inputs_hash: e.idempotency_key,\n  decision_id: out.decision?.decision_id ?? null\n};\nreturn [{ json: {\n  ...out,\n  _envelope: {\n    ...e,\n    span_id: e.parent_span_id,\n    provenance: [...(e.provenance ?? []), entry],\n    budget: { ...(e.budget ?? {}), spent_minor_units: (e.budget?.spent_minor_units ?? 0) + (entry.cost_minor_units ?? 0) }\n  },\n  _telemetry: {\n    event_id: 'evt_' + Math.random().toString(36).slice(2, 12),\n    trace_id: e.trace_id, span_id: e.span_id, tenant_id: e.tenant_id,\n    capability: \"sub.intake\", capability_version: \"1.0.0\",\n    layer: \"subsystem\", event: 'span_end', status: out.error ? 'error' : 'ok',\n    duration_ms: duration, cost_minor_units: entry.cost_minor_units,\n    error_code: out.error?.code ?? null, at: new Date().toISOString()\n  }\n} }];"
+      }
+    },
+    {
+      "id": "n_0035",
+      "name": "Emit Telemetry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        580,
+        1820
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_TELEMETRY_URL }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._telemetry) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0036",
+      "name": "On Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        2260
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "n_0037",
+      "name": "Park to DLQ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        580,
+        2260
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_STATE_URL }}/dlq",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  capability: \"sub.intake\",\n  capability_version: \"1.0.0\",\n  trace_id: $json.execution?.id,\n  error: { message: $json.execution?.error?.message, node: $json.execution?.lastNodeExecuted, stack: $json.execution?.error?.stack },\n  envelope: $json.execution?.data,\n  replayable: true,\n  at: new Date().toISOString()\n}) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0038",
+      "name": "Notify Ops",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        920,
+        2260
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $env.MOS_OPS_CHAT_ID }}",
+        "text": "=Run failed in sub.intake\n{{ $json.execution?.error?.message }}\nNode: {{ $json.execution?.lastNodeExecuted }}\nReplay: mos replay {{ $json.execution?.id }}",
+        "additionalFields": {}
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Classify Intent · Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classify Intent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Intent · Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Classify Intent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalise Message": {
+      "main": [
+        [
+          {
+            "node": "Needs Transcription?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Transcription?": {
+      "main": [
+        [
+          {
+            "node": "Transcribe Voice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Classify Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe Voice": {
+      "main": [
+        [
+          {
+            "node": "Classify Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Intent": {
+      "main": [
+        [
+          {
+            "node": "Route by Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Intent": {
+      "main": [
+        [
+          {
+            "node": "Synthesise Brief",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Synthesise Brief",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Synthesise Brief",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route to Q&A",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Synthesise Brief",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Forward to Approval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Run Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Out of Scope",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Synthesise Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Synthesise Brief": {
+      "main": [
+        [
+          {
+            "node": "Brief Usable?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brief Usable?": {
+      "main": [
+        [
+          {
+            "node": "Ask a Question",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask a Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Envelope In",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envelope In": {
+      "main": [
+        [
+          {
+            "node": "Span Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Span Start": {
+      "main": [
+        [
+          {
+            "node": "Budget Guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Budget Guard": {
+      "main": [
+        [
+          {
+            "node": "Normalise Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provenance & Span End": {
+      "main": [
+        [
+          {
+            "node": "Emit Telemetry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask a Question": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to Q&A": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forward to Approval": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Status": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Out of Scope": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Error": {
+      "main": [
+        [
+          {
+            "node": "Park to DLQ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Park to DLQ": {
+      "main": [
+        [
+          {
+            "node": "Notify Ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "errorWorkflow": "",
+    "timezone": "UTC",
+    "executionTimeout": 120
+  },
+  "tags": [
+    {
+      "name": "mos:subsystem"
+    },
+    {
+      "name": "mos:ga"
+    },
+    {
+      "name": "tag:subsystem.intake"
+    }
+  ],
+  "meta": {
+    "mos": {
+      "capability_id": "sub.intake",
+      "version": "1.0.0",
+      "layer": "subsystem",
+      "owner": "intake",
+      "side_effects": "external_write",
+      "idempotent": true,
+      "compensation": null,
+      "verticals": "*",
+      "compiled_at": null,
+      "compiled_from": "specs/subsystems/sub.intake.json",
+      "extends": null,
+      "generated": "Compiled by marketing-os/compiler. Edit the spec, not this file — canvas edits are overwritten on the next build."
+    }
+  },
+  "pinData": {}
+}

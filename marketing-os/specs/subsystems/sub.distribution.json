@@ -1,0 +1,45 @@
+{
+  "capability": {
+    "id": "sub.distribution",
+    "version": "1.0.0",
+    "layer": "subsystem",
+    "title": "Distribution & Scheduling",
+    "summary": "Takes cleared creative and gets it out, one channel-neutral PublishRequest per slot, routed to the right adapter and paced by the queue. Adding a channel to the entire estate is one adapter plus one registry entry.",
+    "owner": "distribution",
+    "maturity": "ga",
+    "capability_tags": ["subsystem.distribution"],
+    "side_effects": "publish",
+    "idempotent": true,
+    "sla": { "p50_ms": 4000, "p95_ms": 15000, "timeout_ms": 120000 },
+    "requires": { "capabilities": ["dist.schedule.enqueue", "dist.publish.telegram", "dist.publish.linkedin", "dist.publish.blog", "asset.ledger.append"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0, "variable_by": ["channels"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "guard", "kind": "guard", "title": "Governance Cleared?", "group": "Guard",
+        "with": { "checks": ["approval", "compliance", "brand", "rights"],
+          "note": "The subsystem boundary re-checks even though sub.governance just ran. Cheap, and it makes a mis-wired caller fail closed." } },
+      { "id": "build", "kind": "code", "title": "Build Publish Requests", "group": "Fan Out",
+        "with": { "code": "// One PublishRequest per channel slot, with a deterministic idempotency key so a replayed\n// run cannot double-post. The key is the whole reason a retry is safe here.\nconst crypto = require('crypto');\nconst e = $('Envelope In').first().json;\nconst p = e.payload;\nconst reqs = (p.slots || []).map((slot, i) => {\n  const content = (p.copy || []).find(c => c.slot?.channel === slot.channel && c.slot?.format === slot.format) || (p.copy || [])[i] || {};\n  const assets = (p.assets || []).filter(a => !a.channel_fit || a.channel_fit.includes(slot.channel));\n  const body = [content.hook, content.body].filter(Boolean).join('\\n\\n');\n  const key = crypto.createHash('sha256').update([e.tenant_id, slot.channel, slot.format, body, assets.map(a => a.asset_id).join(',')].join('|')).digest('hex');\n  return {\n    request_id: 'pub_' + key.slice(0, 16),\n    tenant_id: e.tenant_id,\n    brand_id: e.brand_id,\n    trace_id: e.trace_id,\n    channel: slot.channel,\n    format: slot.format,\n    account_ref: p.accounts?.[slot.channel] || null,\n    content: { title: content.title || null, body, caption: content.caption || content.body || null, hashtags: content.hashtags || [], link: content.link || null, alt_text: content.alt_text || null, first_comment: content.first_comment || null, asset_ids: assets.map(a => a.asset_id), asset_urls: assets.map(a => a.public_url) },\n    schedule: p.schedule || { mode: 'now' },\n    gates: p.gates || {},\n    idempotency_key: key,\n    dry_run: p.dry_run === true\n  };\n});\nreturn reqs.map(r => ({ json: r }));" } },
+      { "id": "pace", "kind": "call", "title": "Enqueue / Pace", "group": "Fan Out",
+        "with": { "capability": "dist.schedule.enqueue", "mode": "each" } },
+      { "id": "due_now", "kind": "if", "title": "Due Now?", "group": "Fan Out",
+        "with": { "condition": "={{ $json.mode === 'now' && $json.slot_at_or_before_now !== false }}" },
+        "next": { "true": "route", "false": "queued" } },
+      { "id": "route", "kind": "route", "title": "Route to Adapter", "group": "Publish",
+        "with": { "tag": "distribute.publish",
+          "note": "The channel field in the request picks the adapter through the policy table. This workflow names no platform." } },
+      { "id": "publish", "kind": "call", "title": "Publish", "group": "Publish",
+        "with": { "capability": "={{ $json.resolved_capability }}", "mode": "dynamic" },
+        "onError": "continue" },
+      { "id": "outcome", "kind": "code", "title": "Collect Outcomes", "group": "Publish",
+        "with": { "code": "// Partial success is a normal outcome, not an error. Report exactly what went out and what\n// did not, so a human fixes one channel instead of re-running a whole campaign.\nconst items = $input.all().map(i => i.json);\nconst ok = items.filter(x => x.published_at && !x.error);\nconst failed = items.filter(x => x.error);\nreturn [{ json: {\n  published: ok.map(x => ({ channel: x.channel, external_id: x.external_id, url: x.url || null })),\n  failed: failed.map(x => ({ channel: x.channel, code: x.error.code, message: x.error.message })),\n  status: failed.length === 0 ? 'complete' : (ok.length ? 'partial' : 'failed'),\n  published_count: ok.length,\n  failed_count: failed.length\n} }];" } },
+      { "id": "log", "next": null, "kind": "call", "title": "Log to Ledger", "group": "Log",
+        "with": { "capability": "asset.ledger.append", "mode": "each" } },
+      { "id": "queued", "kind": "set", "title": "Queued for Later", "group": "Fan Out",
+        "with": { "assignments": { "status": "queued", "scheduled_for": "={{ $json.slot_at }}" } } }
+    ]
+  }
+}

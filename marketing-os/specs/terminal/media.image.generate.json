@@ -1,0 +1,43 @@
+{
+  "capability": {
+    "id": "media.image.generate",
+    "version": "1.0.0",
+    "layer": "terminal",
+    "title": "Generate Image",
+    "summary": "One prompt in, one durable asset out. Handles provider fallback, base64-to-binary conversion and immediate promotion to durable storage — provider URLs expire, and an asset that expires mid-campaign is an outage nobody catches until a post is already live.",
+    "owner": "visual",
+    "maturity": "ga",
+    "capability_tags": ["produce.image"],
+    "output_schema": "contracts/creative-asset.schema.json",
+    "side_effects": "spend",
+    "idempotent": true,
+    "compensation": "asset.store.delete",
+    "providers": [
+      { "name": "openai", "model": "gpt-image-1", "tier": "standard", "cost_per_unit_minor": 4, "unit": "image" },
+      { "name": "higgsfield", "model": "hf_image", "tier": "standard", "cost_per_unit_minor": 3, "unit": "image" }
+    ],
+    "sla": { "p50_ms": 9000, "p95_ms": 30000, "timeout_ms": 120000 },
+    "retry": { "max_attempts": 3, "backoff": "exponential", "base_ms": 3000, "retry_on": ["RATE_LIMITED", "TIMEOUT", "PROVIDER_ERROR"] },
+    "circuit_breaker": { "failure_threshold": 5, "window_s": 300, "cooldown_s": 120 },
+    "requires": { "secrets": ["OPENAI_API_KEY"], "capabilities": ["asset.store.put"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 4, "variable_by": ["variants"] }
+  },
+  "n8n": {
+    "trigger": { "kind": "executeWorkflow" },
+    "nodes": [
+      { "id": "generate", "kind": "http", "title": "Generate Image", "group": "Generate Image",
+        "with": { "method": "POST", "url": "https://api.openai.com/v1/images/generations", "auth": "openAiApi",
+          "body": { "model": "gpt-image-1", "prompt": "={{ $json.payload.prompt }}", "size": "={{ $json.payload.size || '1024x1024' }}", "quality": "={{ $json.payload.quality || 'high' }}", "n": 1 },
+          "timeout_ms": 120000 },
+        "onError": "route:fallback" },
+      { "id": "fallback", "kind": "http", "title": "Fallback Provider", "group": "Generate Image",
+        "with": { "method": "POST", "url": "={{ $env.HIGGSFIELD_URL }}/v1/images", "auth": "headerAuth",
+          "body": { "prompt": "={{ $('Envelope In').first().json.payload.prompt }}", "aspect_ratio": "={{ $('Envelope In').first().json.payload.aspect_ratio || '1:1' }}" } } },
+      { "id": "to_binary", "kind": "code", "title": "Convert to Binary", "group": "Normalise",
+        "with": { "code": "const d = ($json.data && $json.data[0]) || $json;\nconst b64 = d.b64_json || d.image_base64 || null;\nconst url = d.url || d.image_url || null;\nif (!b64 && !url) throw new Error('PROVIDER_ERROR: no image payload returned');\nconst item = { json: { source_url: url, provider: $json.data ? 'openai' : 'higgsfield', revised_prompt: d.revised_prompt || null } };\nif (b64) item.binary = { data: { data: b64, mimeType: 'image/png', fileName: 'image.png' } };\nreturn [item];" } },
+      { "id": "store", "kind": "call", "title": "Store Durably", "group": "Persist",
+        "with": { "capability": "asset.store.put", "payload": { "kind": "image", "role": "={{ $('Envelope In').first().json.payload.role || 'hero' }}", "prompt": "={{ $('Envelope In').first().json.payload.prompt }}", "source_url": "={{ $json.source_url }}", "provider": "={{ $json.provider }}" } } }
+    ]
+  }
+}

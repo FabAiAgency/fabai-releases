@@ -1,0 +1,128 @@
+{
+  "id": "ecommerce_dtc",
+  "title": "E-commerce / Direct-to-Consumer",
+  "extends": "generic",
+  "description": "Impulse-to-considered, visual-first, volume-hungry. The system's job here is variant throughput with brand consistency, and ruthless reuse of whatever is already converting.",
+
+  "taxonomy": {
+    "offer_types": ["product_physical", "bundle", "subscription", "marketplace_listing"],
+    "buyer_type_default": "b2c_individual",
+    "buying_cycle_days": 3,
+    "purchase_triggers": ["scroll-stop moment", "discount or bundle", "restock", "seasonal need", "creator recommendation", "abandoned cart reminder"],
+    "geo_scope_default": "national",
+    "seasonality": [
+      { "window": "black_friday_cyber_monday", "modifier": 3.0, "note": "Creative must be locked and approved two weeks before — the approval queue is the bottleneck, not production." },
+      { "window": "q4_gifting", "modifier": 2.0 },
+      { "window": "new_year_reset", "modifier": 1.4 },
+      { "window": "summer_lull", "modifier": 0.7 }
+    ]
+  },
+
+  "message": {
+    "proof_types": ["review_score", "before_after", "testimonial", "stat", "press", "warranty"],
+    "objection_library": ["will it actually look like the photo", "shipping cost and speed", "returns hassle", "is the quality worth the price", "sizing/fit uncertainty", "I can find it cheaper"],
+    "angle_library": ["scroll-stopping demo", "unboxing", "problem/solution in 3 seconds", "ingredient or material reveal", "founder's reason", "customer reaction", "comparison to the cheap version", "gift framing"],
+    "lexicon": {
+      "prefer": ["material names", "measurements", "sensory verbs", "review quotes verbatim"],
+      "avoid": ["luxury redefined", "must-have", "obsessed", "literally everyone"],
+      "banned": ["clinically proven", "cures", "permanent results", "lowest price anywhere"]
+    },
+    "tone_default": ["warm", "fast", "concrete"],
+    "reading_level": 6
+  },
+
+  "channels": {
+    "weights": { "instagram": 0.3, "tiktok": 0.25, "email": 0.2, "product_listing": 0.15, "ads_meta": 0.1 },
+    "formats": { "instagram": ["reel", "feed_image", "carousel", "story"], "tiktok": ["video"], "email": ["broadcast"], "product_listing": ["pdp_copy", "gallery", "a_plus"] },
+    "excluded": []
+  },
+
+  "creative": {
+    "image_style": "product hero on a clean surface with soft directional light, plus a lifestyle-in-use frame; true-to-life colour, visible texture and material",
+    "image_negative": "impossible product geometry, misspelt packaging text, floating shadowless product, over-smoothed plastic look, wrong count of items",
+    "video_style": "UGC-native: handheld, spoken to camera, product in hand within the first second, hard cuts, on-screen text carrying the claim",
+    "shot_grammar": ["hook in hand", "problem it solves", "close-up texture/detail", "in-use moment", "result", "offer + cta"],
+    "aspect_ratios": ["9:16", "1:1", "4:5"],
+    "default_duration_s": 21,
+    "voice": { "gender": "neutral", "pace": "fast", "style": "enthusiastic-but-real" },
+    "asset_reuse_bias": 0.35
+  },
+
+  "compliance": { "profile": "standard", "regulated_claims": ["health benefit", "sustainability claim", "country of origin", "comparative pricing"], "review_mode": "sampled" },
+
+  "kpis": [
+    { "metric": "roas", "primary": true, "benchmark": 2.5 },
+    { "metric": "thumb_stop_rate", "primary": true, "benchmark": 0.3 },
+    { "metric": "add_to_cart_rate", "primary": false, "benchmark": 0.08 },
+    { "metric": "cost_per_acquisition", "primary": true, "benchmark": null }
+  ],
+
+  "capability_bindings": {
+    "produce.image.prompt": "prompt.image.compose.product_studio",
+    "assemble.video": "media.video.render.ugc_vertical",
+    "research.product": "research.product.catalog"
+  },
+
+  "plays": [
+    {
+      "id": "variant_swarm",
+      "title": "Variant swarm for paid testing",
+      "objective": "conversion",
+      "when": "A product needs creative volume for a paid test, or an existing angle is fatiguing.",
+      "steps": [
+        { "tag": "plan.brief" },
+        { "tag": "research.product", "with": { "source": "catalog_and_reviews" } },
+        { "tag": "produce.script", "with": { "variants": 5, "vary": "hook_only" } },
+        { "tag": "asset.search", "with": { "filter": "same_sku" }, "parallel_group": "media" },
+        { "tag": "produce.image", "parallel_group": "media" },
+        { "tag": "produce.video.clip", "parallel_group": "media" },
+        { "tag": "assemble.video", "with": { "variants": 5 } },
+        { "tag": "verify.brand" },
+        { "tag": "approve.human", "with": { "mode": "batch_review" } },
+        { "tag": "distribute.publish" },
+        { "tag": "measure.collect", "with": { "window_days": 7 } },
+        { "tag": "measure.score" },
+        { "tag": "learn.update" }
+      ],
+      "expected_kpi": "roas"
+    },
+    {
+      "id": "review_to_creative",
+      "title": "Mine reviews, make the ad",
+      "objective": "conversion",
+      "when": "A SKU has 25+ reviews. Customers have already written the copy.",
+      "steps": [
+        { "tag": "research.product", "with": { "source": "reviews", "extract": "recurring phrases, objections answered, surprise delights" } },
+        { "tag": "plan.brief" },
+        { "tag": "produce.copy.short", "with": { "constraint": "use customer phrasing verbatim where possible" } },
+        { "tag": "produce.image.prompt" },
+        { "tag": "produce.image" },
+        { "tag": "verify.compliance", "with": { "check": "testimonial is real and attributable" } },
+        { "tag": "distribute.publish" }
+      ],
+      "expected_kpi": "add_to_cart_rate"
+    },
+    {
+      "id": "listing_uplift",
+      "title": "PDP and listing refresh",
+      "objective": "conversion",
+      "when": "Traffic is healthy but conversion on the listing is below benchmark.",
+      "steps": [
+        { "tag": "research.product", "with": { "source": "catalog_and_competitor_listings" } },
+        { "tag": "produce.copy.longform", "with": { "structure": "pdp", "constraint": "structured attributes first" } },
+        { "tag": "produce.image", "with": { "variants": 6, "set": "gallery" } },
+        { "tag": "verify.compliance" },
+        { "tag": "approve.human" },
+        { "tag": "distribute.publish", "with": { "channel": "product_listing" } }
+      ],
+      "expected_kpi": "add_to_cart_rate"
+    }
+  ],
+
+  "prompt_fragments": {
+    "voice": "Talk like a friend who owns the thing and is showing it to you. First sentence earns the second. No brand poetry.",
+    "proof_instruction": "Lead with what a real customer said or a measurable property (weight, dimensions, material, wash count, battery hours).",
+    "visual_instruction": "The product must be unmistakable, correctly proportioned and the right colour. Prefer one product per frame. Never render brand names or packaging copy as image text.",
+    "hook_instruction": "The first 1.5 seconds must contain motion and the product. A talking head with no product in frame is a failed hook."
+  }
+}

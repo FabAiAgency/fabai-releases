@@ -1,0 +1,44 @@
+{
+  "capability": {
+    "id": "sys.gateway",
+    "version": "1.0.0",
+    "layer": "system",
+    "title": "Omni-channel Gateway",
+    "summary": "Every way work enters the system, in one place: a human messaging a bot, a webhook from a CRM or e-commerce platform, a schedule, or a direct API call. Its only jobs are to authenticate the source, mint a correctly-scoped Envelope, and hand off. It contains no marketing logic at all — that separation is why adding an intake channel never risks a production pipeline.",
+    "owner": "platform",
+    "maturity": "ga",
+    "capability_tags": ["system.gateway"],
+    "side_effects": "external_write",
+    "idempotent": true,
+    "sla": { "p50_ms": 300, "p95_ms": 1500, "timeout_ms": 30000 },
+    "requires": { "secrets": ["TELEGRAM_BOT_TOKEN", "MOS_STATE_URL"], "capabilities": ["sys.orchestrator"] },
+    "verticals": "*",
+    "cost_model": { "estimate_minor_units": 0 }
+  },
+  "n8n": {
+    "trigger": [
+      { "kind": "telegram", "id": "trg_telegram", "title": "Telegram" },
+      { "kind": "webhook", "id": "trg_webhook", "title": "Webhook (CRM / commerce / forms)", "path": "mos/intake", "method": "POST" },
+      { "kind": "schedule", "id": "trg_schedule", "title": "Scheduled Plays", "cron": "0 9 * * 1-5" }
+    ],
+    "nodes": [
+      { "id": "identify", "kind": "code", "title": "Identify Tenant & Source", "group": "Gateway",
+        "with": { "code": "// Tenancy is established HERE and nowhere else. Everything downstream trusts envelope.tenant_id\n// absolutely, so this is the one place that must get it right.\nconst trigger = $execution?.customData?.get?.('trigger') || $json.__trigger || 'unknown';\nconst TENANT_MAP = JSON.parse($env.MOS_TENANT_MAP || '{}');\n\nlet source_channel = 'api', external_id = null, text = '', raw = $json;\n\nif ($json.message || $json.callback_query) {\n  source_channel = 'telegram';\n  external_id = String($json.message?.chat?.id ?? $json.callback_query?.message?.chat?.id ?? '');\n  text = $json.message?.text || $json.message?.caption || '';\n} else if ($json.headers) {\n  source_channel = $json.body?.source || 'webhook';\n  external_id = $json.headers['x-mos-tenant'] || $json.body?.tenant_id || null;\n  text = $json.body?.text || $json.body?.prompt || '';\n  raw = $json.body;\n} else if ($json.__schedule) {\n  source_channel = 'schedule';\n  external_id = $json.tenant_id;\n  text = $json.prompt || '';\n}\n\nconst tenant = TENANT_MAP[`${source_channel}:${external_id}`] || TENANT_MAP[external_id] || null;\nif (!tenant) {\n  throw new Error(`POLICY_BLOCKED: unrecognised source ${source_channel}:${external_id} — refusing to process work for an unmapped tenant`);\n}\n\nreturn [{ json: { source_channel, external_id, text, raw, tenant } }];" } },
+      { "id": "envelope", "kind": "code", "title": "Mint Envelope", "group": "Gateway",
+        "with": { "code": "// One envelope, minted once, carried everywhere. Its policy block is the CEILING for this run:\n// downstream units may narrow it, never widen it.\nconst crypto = require('crypto');\nconst s = $json;\nconst t = s.tenant;\nconst trace_id = 'trc_' + crypto.randomUUID().replace(/-/g, '').slice(0, 20);\nconst idem = crypto.createHash('sha256').update([t.tenant_id, s.source_channel, s.external_id, s.text, new Date().toISOString().slice(0, 13)].join('|')).digest('hex');\n\nreturn [{ json: {\n  envelope_version: '1.0.0',\n  trace_id,\n  span_id: 'spn_' + crypto.randomUUID().slice(0, 8),\n  parent_span_id: null,\n  tenant_id: t.tenant_id,\n  brand_id: t.default_brand_id || null,\n  vertical: t.vertical || 'generic',\n  locale: t.locale || 'en-US',\n  region: t.region || 'us',\n  intent: 'intake.received',\n  stage: 'intake',\n  idempotency_key: idem,\n  attempt: 1,\n  max_attempts: 3,\n  deadline_at: new Date(Date.now() + (t.deadline_minutes ?? 30) * 60000).toISOString(),\n  policy: {\n    autonomy_level: t.autonomy_level || 'publish_with_approval',\n    compliance_profile: t.compliance_profile || 'standard',\n    approval_mode: t.approval_mode || 'channel_conditional',\n    data_residency: t.data_residency || 'any',\n    pii_redaction: t.pii_redaction !== false,\n    allow_external_research: t.allow_external_research !== false,\n    model_tier_cap: t.model_tier_cap || 'frontier'\n  },\n  budget: {\n    currency: t.currency || 'USD',\n    cap_minor_units: t.run_budget_minor_units ?? 2000,\n    spent_minor_units: 0,\n    soft_limit_pct: 0.8,\n    on_soft_limit: 'downgrade_tier'\n  },\n  routing: {},\n  payload: { source_channel: s.source_channel, raw: s.raw, text: s.text, reply_to: s.external_id },\n  provenance: [],\n  error: null\n} }];" } },
+      { "id": "dedupe", "kind": "http", "title": "Duplicate Request?", "group": "Gateway",
+        "with": { "method": "GET", "url": "={{ $env.MOS_STATE_URL }}/runs/by-idempotency/{{ $json.idempotency_key }}", "auth": "headerAuth" },
+        "onError": "continue" },
+      { "id": "is_dupe", "kind": "if", "title": "Already Running?", "group": "Gateway",
+        "with": { "condition": "={{ !$json.trace_id }}" },
+        "next": { "true": "orchestrate", "false": "dupe_reply" } },
+      { "id": "orchestrate", "kind": "call", "title": "Run Orchestrator", "group": "Handoff",
+        "with": { "capability": "sys.orchestrator" } },
+      { "id": "reply", "next": null, "kind": "telegram", "title": "Reply", "group": "Handoff",
+        "with": { "operation": "sendMessage", "chatId": "={{ $('Mint Envelope').first().json.payload.reply_to }}", "text": "={{ $json.human_summary || 'Done.' }}" },
+        "onError": "continue" },
+      { "id": "dupe_reply", "kind": "set", "title": "Duplicate — No-op", "group": "Gateway",
+        "with": { "assignments": { "status": "duplicate_ignored", "existing_trace_id": "={{ $json.trace_id }}", "note": "The same request within the same hour returns the in-flight run instead of starting a second one. Double-posting is the failure mode users notice most." } } }
+    ]
+  }
+}

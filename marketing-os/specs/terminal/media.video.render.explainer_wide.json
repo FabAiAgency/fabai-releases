@@ -1,0 +1,27 @@
+{
+  "extends": "media.video.render",
+  "capability": {
+    "id": "media.video.render.explainer_wide",
+    "version": "1.0.0",
+    "title": "Render Video — Explainer Wide",
+    "summary": "Bound by B2B software, industrial and home goods long-form. Slower cuts, lower-third captions, room for on-screen annotation, logo bug persistent.",
+    "capability_tags": ["assemble.video"],
+    "verticals": ["b2b_saas", "b2b_industrial", "home_goods", "professional_services"],
+    "side_effects": "spend",
+    "idempotent": true,
+    "compensation": "asset.store.delete"
+  },
+  "overrides": {
+    "timeline": {
+      "template": {
+        "aspect_ratio": "16:9",
+        "caption_style": { "font_family": "Inter", "font_weight": "600", "font_size": "4.2vh", "fill_color": "#F5F5F5", "background_color": "rgba(0,0,0,0.55)", "y": "86%", "x_alignment": "50%", "max_width": "76%" },
+        "transitions": "cross_dissolve_200ms",
+        "music_volume": 0.06,
+        "persistent_logo_bug": true,
+        "annotation_layer": true,
+        "end_card": "brand_cta_card_wide"
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@fabai/marketing-os",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Enterprise marketing automation OS: declarative specs compiled into an n8n workflow estate, with a vertical-agnostic contract layer, a policy-driven decision engine and static estate validation.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node compiler/index.mjs",
+    "validate": "node tools/validate.mjs",
+    "test": "node tests/run.mjs",
+    "check": "npm run build && npm run validate && npm test",
+    "graph": "node tools/graph.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

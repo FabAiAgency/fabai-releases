@@ -1,0 +1,485 @@
+{
+  "name": "[terminal] Generate Short-form Copy",
+  "nodes": [
+    {
+      "id": "n_0015",
+      "name": "Frame · Envelope In",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        490,
+        170
+      ],
+      "parameters": {
+        "content": "## Envelope In",
+        "height": 330,
+        "width": 1040,
+        "color": 5
+      }
+    },
+    {
+      "id": "n_0016",
+      "name": "Frame · Context",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1510,
+        170
+      ],
+      "parameters": {
+        "content": "## Context",
+        "height": 330,
+        "width": 360,
+        "color": 6
+      }
+    },
+    {
+      "id": "n_0017",
+      "name": "Frame · Content Generation",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1745,
+        170
+      ],
+      "parameters": {
+        "content": "## Content Generation",
+        "height": 830,
+        "width": 805,
+        "color": 7
+      }
+    },
+    {
+      "id": "n_0018",
+      "name": "Frame · Telemetry Out",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2530,
+        170
+      ],
+      "parameters": {
+        "content": "## Telemetry Out",
+        "height": 330,
+        "width": 700,
+        "color": 2
+      }
+    },
+    {
+      "id": "n_0019",
+      "name": "Frame · Error & DLQ",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        150,
+        860
+      ],
+      "parameters": {
+        "content": "## Error & DLQ",
+        "height": 330,
+        "width": 1040,
+        "color": 3
+      }
+    },
+    {
+      "id": "n_0006",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "n_0007",
+      "name": "Envelope In",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED preamble — every unit in the estate starts here, identically.\n// Rejects an envelope whose MAJOR version this unit does not implement, rather than\n// half-processing a shape it does not understand.\nconst SUPPORTED_MAJOR = 1;\nconst raw = $json.envelope ?? $json;\nconst v = String(raw.envelope_version ?? '0.0.0');\nif (Number(v.split('.')[0]) !== SUPPORTED_MAJOR) {\n  throw new Error('VALIDATION_FAILED: envelope_version ' + v + ' is not supported by copy.short.generate@1.0.0 (needs ' + SUPPORTED_MAJOR + '.x)');\n}\nfor (const f of ['trace_id', 'tenant_id', 'idempotency_key']) {\n  if (!raw[f]) throw new Error('VALIDATION_FAILED: envelope.' + f + ' is required');\n}\nif (raw.deadline_at && Date.parse(raw.deadline_at) < Date.now()) {\n  // Fail fast rather than start work that cannot finish in time.\n  throw new Error('TIMEOUT: deadline_at ' + raw.deadline_at + ' already passed before copy.short.generate started');\n}\nreturn [{ json: {\n  ...raw,\n  span_id: 'spn_' + Math.random().toString(36).slice(2, 10),\n  parent_span_id: raw.span_id ?? null,\n  policy: raw.policy ?? {},\n  budget: raw.budget ?? {},\n  provenance: raw.provenance ?? [],\n  _started_at: Date.now(),\n  _capability: \"copy.short.generate\",\n  _capability_version: \"1.0.0\"\n} }];"
+      }
+    },
+    {
+      "id": "n_0008",
+      "name": "Span Start",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED telemetry — span_start.\nconst e = $json;\nreturn [{ json: { ...e, _telemetry: {\n  event_id: 'evt_' + Math.random().toString(36).slice(2, 12),\n  trace_id: e.trace_id, span_id: e.span_id, parent_span_id: e.parent_span_id,\n  tenant_id: e.tenant_id, brand_id: e.brand_id ?? null, vertical: e.vertical ?? null,\n  capability: \"copy.short.generate\", capability_version: \"1.0.0\",\n  layer: \"terminal\", stage: e.stage ?? null,\n  event: 'span_start', at: new Date().toISOString()\n} } }];"
+      }
+    },
+    {
+      "id": "n_0009",
+      "name": "Budget Guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED budget guard — injected because copy.short.generate declares a cost\n// (estimate 1 minor units). A unit that can spend\n// money never gets to decide for itself whether it may.\nconst ESTIMATE = 1;\nconst e = $json;\nconst b = e.budget ?? {};\nconst cap_ = b.cap_minor_units ?? null;\nconst spent = b.spent_minor_units ?? 0;\nif (cap_ !== null && spent + ESTIMATE > cap_) {\n  throw new Error('BUDGET_EXCEEDED: ' + (spent + ESTIMATE) + ' would exceed cap ' + cap_ + ' in copy.short.generate');\n}\nlet tier = e.policy?.model_tier_cap ?? 'frontier';\nconst soft = b.soft_limit_pct ?? 0.8;\nif (cap_ !== null && spent + ESTIMATE > cap_ * soft) {\n  tier = { frontier: 'standard', standard: 'small', small: 'nano', nano: 'nano' }[tier] ?? 'small';\n}\nreturn [{ json: { ...e, policy: { ...(e.policy ?? {}), model_tier_cap: tier }, _budget_reserved: ESTIMATE } }];"
+      }
+    },
+    {
+      "id": "n_0001",
+      "name": "Resolve Slot Spec",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const CHANNELS = JSON.parse($env.MOS_CHANNELS || '{}');\nconst p = $json.payload;\nconst slot = p.slot;\nconst fmt = CHANNELS[slot.channel]?.formats?.[slot.format] || {};\nreturn [{ json: { slot, limits: fmt, variants: p.variants || slot.variants || 1, brief: p.brief, profile: p.profile || {}, seed_text: p.seed_text || null, preserve: p.preserve || null } }];"
+      }
+    },
+    {
+      "id": "n_0002",
+      "name": "Short-form Writer",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        1940,
+        300
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "BRIEF:\n{{ JSON.stringify($json.brief) }}\n\n{{ $json.seed_text ? 'DERIVE FROM THIS SOURCE (do not contradict it):\\n' + $json.seed_text : '' }}\n\nProduce {{ $json.variants }} variant(s) for {{ $json.slot.channel }} / {{ $json.slot.format }}.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You write short-form marketing copy. Variants must be GENUINELY different — different hook, different entry point, different proof — not the same sentence reworded. A set of near-identical variants is a failed generation because it tests nothing.\n\nHARD LIMITS: {{ JSON.stringify($json.limits) }}\nVOICE: {{ $json.profile.prompt_fragments?.voice }}\nHOOK RULE: {{ $json.profile.prompt_fragments?.hook_instruction || 'The first line must earn the second.' }}\nCTA RULE: {{ $json.profile.prompt_fragments?.cta_instruction }}\nBANNED: {{ ($json.profile.message?.lexicon?.banned || []).join(', ') }}\n{{ $json.preserve ? 'PRESERVE ACROSS VARIANTS: ' + $json.preserve : '' }}"
+            }
+          ]
+        },
+        "hasOutputParser": true
+      }
+    },
+    {
+      "id": "n_0003",
+      "name": "Short-form Writer · Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [
+        1835,
+        550
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-haiku-4-5-20251001",
+          "mode": "list"
+        },
+        "options": {
+          "temperature": 0.8,
+          "maxTokens": 2000
+        }
+      }
+    },
+    {
+      "id": "n_0004",
+      "name": "Short-form Writer · Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        2045,
+        550
+      ],
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"required\": [\n    \"variants\"\n  ],\n  \"properties\": {\n    \"variants\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"required\": [\n          \"body\"\n        ],\n        \"properties\": {\n          \"hook\": {\n            \"type\": \"string\"\n          },\n          \"body\": {\n            \"type\": \"string\"\n          },\n          \"cta\": {\n            \"type\": \"string\"\n          },\n          \"hashtags\": {\n            \"type\": \"array\",\n            \"items\": {\n              \"type\": \"string\"\n            }\n          },\n          \"alt_text\": {\n            \"type\": \"string\",\n            \"description\": \"Accessibility is not optional on channels that support it; it is also read by ranking systems.\"\n          },\n          \"angle\": {\n            \"type\": \"string\"\n          },\n          \"char_count\": {\n            \"type\": \"integer\"\n          }\n        }\n      }\n    }\n  }\n}"
+      }
+    },
+    {
+      "id": "n_0005",
+      "name": "Enforce Limits",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2280,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const limits = $('Resolve Slot Spec').first().json.limits || {};\nconst lex = $('Resolve Slot Spec').first().json.profile?.message?.lexicon || {};\nconst out = ($json.output || $json).variants || [];\nconst kept = [], rejected = [];\nfor (const v of out) {\n  const text = [v.hook, v.body, v.cta].filter(Boolean).join('\\n');\n  const issues = [];\n  if (limits.max_chars && text.length > limits.max_chars) issues.push('over_max_chars');\n  if (limits.hashtags_max && (v.hashtags || []).length > limits.hashtags_max) v.hashtags = (v.hashtags || []).slice(0, limits.hashtags_max);\n  for (const b of (lex.banned || [])) if (text.toLowerCase().includes(b.toLowerCase())) issues.push('banned_term:' + b);\n  const rec = { ...v, char_count: text.length, issues };\n  (issues.length ? rejected : kept).push(rec);\n}\nreturn [{ json: { variants: kept, rejected, produced: out.length, usable: kept.length } }];"
+      }
+    },
+    {
+      "id": "n_0010",
+      "name": "Provenance & Span End",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2620,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// GENERATED epilogue — appends exactly one provenance entry and closes the span.\n// Provenance is append-only; nothing in the estate is permitted to rewrite an earlier entry.\nconst e = $('Envelope In').first().json;\nconst out = $json;\nconst duration = Date.now() - (e._started_at ?? Date.now());\nconst entry = {\n  capability: \"copy.short.generate\",\n  version: \"1.0.0\",\n  at: new Date().toISOString(),\n  duration_ms: duration,\n  model: out._model ?? null,\n  provider: out._provider ?? null,\n  cost_minor_units: out._cost_minor_units ?? 1,\n  inputs_hash: e.idempotency_key,\n  decision_id: out.decision?.decision_id ?? null\n};\nreturn [{ json: {\n  ...out,\n  _envelope: {\n    ...e,\n    span_id: e.parent_span_id,\n    provenance: [...(e.provenance ?? []), entry],\n    budget: { ...(e.budget ?? {}), spent_minor_units: (e.budget?.spent_minor_units ?? 0) + (entry.cost_minor_units ?? 0) }\n  },\n  _telemetry: {\n    event_id: 'evt_' + Math.random().toString(36).slice(2, 12),\n    trace_id: e.trace_id, span_id: e.span_id, tenant_id: e.tenant_id,\n    capability: \"copy.short.generate\", capability_version: \"1.0.0\",\n    layer: \"terminal\", event: 'span_end', status: out.error ? 'error' : 'ok',\n    duration_ms: duration, cost_minor_units: entry.cost_minor_units,\n    error_code: out.error?.code ?? null, at: new Date().toISOString()\n  }\n} }];"
+      }
+    },
+    {
+      "id": "n_0011",
+      "name": "Emit Telemetry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2960,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_TELEMETRY_URL }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._telemetry) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0012",
+      "name": "On Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        990
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "n_0013",
+      "name": "Park to DLQ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        580,
+        990
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MOS_STATE_URL }}/dlq",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "headerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  capability: \"copy.short.generate\",\n  capability_version: \"1.0.0\",\n  trace_id: $json.execution?.id,\n  error: { message: $json.execution?.error?.message, node: $json.execution?.lastNodeExecuted, stack: $json.execution?.error?.stack },\n  envelope: $json.execution?.data,\n  replayable: true,\n  at: new Date().toISOString()\n}) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n_0014",
+      "name": "Notify Ops",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        920,
+        990
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $env.MOS_OPS_CHAT_ID }}",
+        "text": "=Run failed in copy.short.generate\n{{ $json.execution?.error?.message }}\nNode: {{ $json.execution?.lastNodeExecuted }}\nReplay: mos replay {{ $json.execution?.id }}",
+        "additionalFields": {}
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Short-form Writer · Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Short-form Writer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Short-form Writer · Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Short-form Writer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Slot Spec": {
+      "main": [
+        [
+          {
+            "node": "Short-form Writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Short-form Writer": {
+      "main": [
+        [
+          {
+            "node": "Enforce Limits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Envelope In",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envelope In": {
+      "main": [
+        [
+          {
+            "node": "Span Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Span Start": {
+      "main": [
+        [
+          {
+            "node": "Budget Guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Budget Guard": {
+      "main": [
+        [
+          {
+            "node": "Resolve Slot Spec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provenance & Span End": {
+      "main": [
+        [
+          {
+            "node": "Emit Telemetry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enforce Limits": {
+      "main": [
+        [
+          {
+            "node": "Provenance & Span End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Error": {
+      "main": [
+        [
+          {
+            "node": "Park to DLQ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Park to DLQ": {
+      "main": [
+        [
+          {
+            "node": "Notify Ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "errorWorkflow": "",
+    "timezone": "UTC",
+    "executionTimeout": 45
+  },
+  "tags": [
+    {
+      "name": "mos:terminal"
+    },
+    {
+      "name": "mos:ga"
+    },
+    {
+      "name": "tag:produce.copy.short"
+    }
+  ],
+  "meta": {
+    "mos": {
+      "capability_id": "copy.short.generate",
+      "version": "1.0.0",
+      "layer": "terminal",
+      "owner": "content",
+      "side_effects": "none",
+      "idempotent": true,
+      "compensation": null,
+      "verticals": "*",
+      "compiled_at": null,
+      "compiled_from": "specs/terminal/copy.short.generate.json",
+      "extends": null,
+      "generated": "Compiled by marketing-os/compiler. Edit the spec, not this file — canvas edits are overwritten on the next build."
+    }
+  },
+  "pinData": {}
+}

@@ -1,0 +1,19 @@
+{
+  "extends": "prompt.image.compose",
+  "capability": {
+    "id": "prompt.image.compose.lifestyle_room",
+    "version": "1.0.0",
+    "title": "Compose Image Prompts — Room & Interior",
+    "summary": "Bound by home_goods. Interiors fail on spatial logic long before they fail on style: wrong scale, impossible geometry and inconsistent light kill a frame that is otherwise beautiful.",
+    "capability_tags": ["produce.image.prompt"],
+    "verticals": ["home_goods"],
+    "side_effects": "none",
+    "idempotent": true
+  },
+  "overrides": {
+    "compose": {
+      "system_append": "\n\nSPATIAL DISCIPLINE\n- Name the room type, its approximate dimensions and the window direction. Hold all three constant across the set.\n- Every piece of furniture sits flat on the floor with a contact shadow. Floating furniture is the single most common failure in this category.\n- Include one human-scale reference per frame (a door, a mug, a standing person out of focus).\n- Shadow direction must agree with the stated window direction in every frame.\n- For before/after pairs, describe the identical room, identical camera position and identical light — change only what the product changes.",
+      "extra_prompt_fields": { "room_type": { "type": "string" }, "window_direction": { "type": "string" }, "pair_role": { "type": "string", "enum": ["before", "after", "single"] } }
+    }
+  }
+}
